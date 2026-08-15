@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Acesso da equipe{% endblock %}
+{% block content %}
+<div class="card" style="max-width:420px; margin:60px auto 0;">
+  <h1 style="margin-top:0; text-align:center;">🔒 Acesso da equipe</h1>
+  <p style="color:var(--muted); text-align:center; margin-top:-8px;">
+    Digite a senha do evento para acessar o check-in/check-out ou o painel.
+  </p>
+
+  <form method="post" action="{{ url_for('login') }}">
+    <input type="hidden" name="proximo" value="{{ proximo }}">
+    <label for="senha">Senha</label>
+    <input type="password" id="senha" name="senha" autofocus required>
+    <button type="submit" style="width:100%;">Entrar</button>
+  </form>
+</div>
+{% endblock %}

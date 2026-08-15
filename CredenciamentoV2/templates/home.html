@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}UniTalks 2026{% endblock %}
+{% block content %}
+<div class="hero">
+  <img src="{{ url_for('static', filename='img/logo.png') }}" alt="UniTalks" class="hero-logo">
+
+  <div class="hero-info">
+    <p class="hero-tagline">Um Negócio por Trás dos Negócios</p>
+    <p class="hero-local">📍 Avenida Diógenes Chianca, 22 km, João Pessoa, Paraíba</p>
+    <div class="hero-datas">
+      <span class="data-pill">📅 16/09/2026</span>
+      <span class="data-pill">📅 17/09/2026</span>
+      <a class="data-pill data-pill-mapa" href="https://maps.app.goo.gl/G4S6b5fQjuUWZs8x6" target="_blank" rel="noopener">
+        🗺️ Como chegar
+      </a>
+    </div>
+    <a class="btn btn-inscricao" href="{{ url_for('inscricao') }}">
+      Fazer Inscrição ↗
+    </a>
+  </div>
+</div>
+
+<div class="card apresentacao-card">
+  <h1>Apresentação do evento</h1>
+  <p>
+    UniTalks 2026 é um evento acadêmico promovido pelos alunos do curso de negócios do Centro
+    Universitário UNIPÊ, com o objetivo de conectar estudantes, profissionais e empreendedores por meio de
+    palestras, experiências práticas, networking e troca de conhecimentos sobre empreendedorismo, inovação e
+    mercado de trabalho.
+  </p>
+</div>
+
+<div class="cronograma-card">
+  <h1 class="cronograma-titulo">📅 Cronograma</h1>
+
+  <div class="dia-evento">
+    <div class="dia-pill">DIA 1: INSPIRAÇÃO, CASES E TENDÊNCIAS</div>
+    <p class="dia-meta">Local: Auditório Principal da Unipê &nbsp;|&nbsp; Data: 16 de Setembro de 2026</p>
+
+    <div class="agenda-item">
+      <div class="agenda-hora">18h30 – 19h00</div>
+      <div class="agenda-texto">
+        <strong>Momento Cultural</strong>
+        <p>Apresentação especial do Coral da Unipê.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h00 – 19h10</div>
+      <div class="agenda-texto">
+        <strong>Abertura Oficial</strong>
+        <p>Boas-vindas, apresentação dos convidados especiais e composição da mesa diretiva.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h10 – 19h20</div>
+      <div class="agenda-texto">
+        <strong>Visão Geral do UniTalks</strong>
+        <p>Breve apresentação da programação completa, palestras e oficinas do evento.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h20 – 19h55</div>
+      <div class="agenda-texto">
+        <strong>Palestra 1: O Cenário Contábil</strong>
+        <p><strong>Convidada:</strong> Representante do CRC-PE (Conselho Regional de Contabilidade de Pernambuco).<br>
+        <strong>Tema:</strong> A definir.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h55 – 20h30</div>
+      <div class="agenda-texto">
+        <strong>Palestra 2: Case de Sucesso</strong>
+        <p><strong>Convidado:</strong> Renato (Softcom).<br>
+        <strong>Tema:</strong> Trajetória Empreendedora e Case de Sucesso da Softcom.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">20h30 – 20h55</div>
+      <div class="agenda-texto">
+        <strong>Debate: O Futuro dos Negócios</strong>
+        <p><strong>Participantes:</strong> Mesa de Convidados (com os palestrantes).<br>
+        <strong>Tema Central:</strong> As influências e os impactos da Inteligência Artificial (IA) nas diferentes áreas de negócios.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">20h55 – 21h00</div>
+      <div class="agenda-texto">
+        <strong>Encerramento do 1º Dia</strong>
+        <p>Agradecimentos finais e chamada especial para as Oficinas Práticas do Dia 2.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dia-evento">
+    <div class="dia-pill">DIA 2: IMERSÃO E OFICINAS PRÁTICAS (SIMULTÂNEAS)</div>
+    <p class="dia-meta">Local: Complexo EVA (Auditório e Salas de Aula) &nbsp;|&nbsp; Data: 17 de Setembro de 2026</p>
+    <p class="dia-obs">
+      Neste dia, o público poderá escolher uma das três trilhas de conhecimento
+      que ocorrerão simultaneamente das 19h às 21h.
+    </p>
+
+    <div class="oficina-item">
+      <strong>Oficina 1: Administração &amp; Tecnologia</strong>
+      <p><strong>Local:</strong> Auditório do EVA<br>
+      <strong>Convidada:</strong> Ana Rodrigues – CFO Vsoft Tecnologia.<br>
+      <strong>Foco:</strong> Finanças, Gestão Estratégica e Tecnologia.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Oficina 2: Ciências Contábeis</strong>
+      <p><strong>Local:</strong> Sala de Aula (EVA) – a definir<br>
+      <strong>Convidado:</strong> Onezildo Martins – Onezildo Martins Escritório de Contabilidade.<br>
+      <strong>Foco:</strong> Atuação Paralegal e os novos desafios da contabilidade.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Oficina 3: Marketing &amp; Estratégia</strong>
+      <p><strong>Local:</strong> Sala de Aula (EVA) – a definir<br>
+      <strong>Convidado:</strong> Davyd Matias – Ex-professor e atual Presidente da Câmara Municipal de Vereadores.<br>
+      <strong>Tema Central:</strong> "Da Sala de Aula à Vida Pública: Branding, Networking e Liderança na Construção de uma Carreira de Sucesso".</p>
+      <p><strong>Foco (Marketing Pessoal e Estratégico):</strong></p>
+      <ul>
+        <li>Práticas de mercado: como transformar conhecimento e experiência em oportunidades.</li>
+        <li>Branding pessoal: construção de uma imagem, reputação e credibilidade.</li>
+        <li>Networking: a importância de criar e manter boas conexões ao longo da carreira.</li>
+        <li>Vida pública e Liderança: como habilidades de comunicação e relacionamento se aplicam na atuação política e além.</li>
+        <li>Trajetória profissional: insights sobre como a experiência educacional abre portas para novos caminhos.</li>
+      </ul>
+      <p><strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:8px;">
+    <a class="btn btn-inscricao" href="{{ url_for('inscricao') }}">
+      Fazer Inscrição ↗
+    </a>
+  </div>
+</div>
+{% endblock %}

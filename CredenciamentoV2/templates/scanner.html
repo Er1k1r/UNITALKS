@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Credenciamento{% endblock %}
+{% block content %}
+<div class="card app-scanner">
+  <h1 style="margin-top:0;">📷 Credenciamento</h1>
+  <p style="color:var(--muted); margin-top:-8px;">
+    Toque em "Ler QR Code" para ativar a câmera. A entrada é registrada
+    automaticamente com a hora exata; uma nova leitura da mesma pessoa
+    registra a saída.
+  </p>
+
+  <div class="local-selecao">
+    <label for="local-leitura" style="margin-top:0;">📍 Onde você está lendo agora? *</label>
+    <select id="local-leitura">
+      <option value="" disabled>Selecione o local...</option>
+      {% for chave, info in locais.items() %}
+        <option value="{{ chave }}">Dia {{ info.dia }} — {{ info.label }}</option>
+      {% endfor %}
+    </select>
+    <div id="local-atual-badge" class="local-badge local-badge-vazio">
+      ⚠️ Nenhum local selecionado — selecione antes de registrar leituras
+    </div>
+  </div>
+
+  <button id="btn-ativar-camera" class="btn navy" style="width:100%; font-size:1.05rem;">
+    📷 Ler QR Code
+  </button>
+
+  <div id="leitor" style="display:none; margin-top:16px;"></div>
+  <button id="btn-parar-camera" class="btn" style="display:none; width:100%; background:#8a8f98;">
+    Parar câmera
+  </button>
+
+  <div id="resultado" class="resultado-vazio">
+    Aguardando leitura...
+  </div>
+  <div id="aviso-extra"></div>
+
+  <hr style="border:none; border-top:1px solid var(--border); margin:28px 0;">
+
+  <h2 style="margin-top:0;">Sem QR Code? Use o número de inscrição</h2>
+  <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">
+    Se a leitura do QR Code falhar, digite o número de inscrição da pessoa
+    (ex.: 202601) e toque em Registrar.
+  </p>
+  <div class="busca-manual">
+    <input type="text" id="numero-inscricao" inputmode="numeric" placeholder="Número de inscrição (ex: 202601)">
+    <button id="btn-registrar-numero" class="btn orange" style="width:100%;">Registrar</button>
+  </div>
+
+  <details style="margin-top:20px;">
+    <summary style="cursor:pointer; color:var(--navy); font-weight:600;">
+      Ou buscar por nome/CPF
+    </summary>
+    <div class="busca-manual" style="margin-top:12px;">
+      <input type="text" id="busca" placeholder="Digite nome, CPF ou e-mail...">
+      <div id="busca-resultados"></div>
+    </div>
+  </details>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// --- Seleção do local (persiste no aparelho do recepcionista, via localStorage) ---
+const LABELS_LOCAL = {
+  {% for chave, info in locais.items() %}"{{ chave }}": "{{ info.label }}",{% endfor %}
+};
+const selectLocal = document.getElementById("local-leitura");
+const badgeLocal = document.getElementById("local-atual-badge");
+
+function atualizarBadgeLocal() {
+  const valor = selectLocal.value;
+  if (!valor) {
+    badgeLocal.className = "local-badge local-badge-vazio";
+    badgeLocal.textContent = "⚠️ Nenhum local selecionado — selecione antes de registrar leituras";
+  } else {
+    badgeLocal.className = "local-badge local-badge-ativo";
+    badgeLocal.textContent = "📍 Lendo QR Codes em: " + LABELS_LOCAL[valor];
+  }
+}
+
+const localSalvo = localStorage.getItem("unitalks_local_leitura");
+if (localSalvo && LABELS_LOCAL[localSalvo]) {
+  selectLocal.value = localSalvo;
+}
+atualizarBadgeLocal();
+
+selectLocal.addEventListener("change", () => {
+  localStorage.setItem("unitalks_local_leitura", selectLocal.value);
+  atualizarBadgeLocal();
+});
+
+function bip(sucesso) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = sucesso ? 880 : 220;
+    gain.gain.value = 0.15;
+    osc.start();
+    setTimeout(() => { osc.stop(); ctx.close(); }, 150);
+  } catch (e) {}
+}
+
+function vibrar() {
+  if (navigator.vibrate) navigator.vibrate(120);
+}
+
+async function registrarCheckin(payload) {
+  const div = document.getElementById("resultado");
+  const divAviso = document.getElementById("aviso-extra");
+  divAviso.innerHTML = "";
+
+  if (!selectLocal.value) {
+    div.className = "resultado-scan erro";
+    div.textContent = "❌ Selecione o local (Auditório ou Sala) antes de registrar.";
+    bip(false);
+    return;
+  }
+  payload.local = selectLocal.value;
+
+  div.className = "resultado-vazio";
+  div.textContent = "Verificando...";
+
+  let data;
+  try {
+    const resp = await fetch("{{ url_for('api_checkin') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    data = await resp.json();
+  } catch (e) {
+    div.className = "resultado-scan erro";
+    div.textContent = "Falha de conexão com o servidor.";
+    bip(false);
+    return;
+  }
+
+  if (!data.ok) {
+    div.className = "resultado-scan erro";
+    div.textContent = "❌ " + data.mensagem;
+    bip(false);
+    vibrar();
+    return;
+  }
+
+  const hora = data.horario.split("T")[1];
+  const tipoLabel = data.tipo === "entrada" ? "✅ ENTRADA registrada" : "🚪 SAÍDA registrada";
+
+  div.className = "resultado-scan " + data.tipo;
+  div.innerHTML = `<strong>${data.nome}</strong><br>${tipoLabel} em <strong>${data.local_label}</strong> às ${hora}`;
+  if (data.aviso) {
+    divAviso.innerHTML = `<div class="aviso-campo" style="margin-top:12px;">${data.aviso}</div>`;
+  }
+  bip(true);
+  vibrar();
+
+  clearTimeout(window._limparResultado);
+  window._limparResultado = setTimeout(() => {
+    div.className = "resultado-vazio";
+    div.textContent = "Aguardando leitura...";
+  }, 4000);
+}
+
+// --- Câmera: só ativa quando o usuário toca no botão ---
+const html5QrCode = new Html5Qrcode("leitor");
+let cameraAtiva = false;
+let ultimaLeitura = 0;
+let ultimoToken = "";
+
+function aoLer(decodedText) {
+  const agora = Date.now();
+  if (decodedText === ultimoToken && agora - ultimaLeitura < 5000) return;
+  ultimaLeitura = agora;
+  ultimoToken = decodedText;
+  registrarCheckin({ token: decodedText });
+}
+
+document.getElementById("btn-ativar-camera").addEventListener("click", () => {
+  if (cameraAtiva) return;
+  document.getElementById("leitor").style.display = "block";
+  document.getElementById("btn-ativar-camera").style.display = "none";
+  document.getElementById("btn-parar-camera").style.display = "block";
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 260, height: 260 } },
+    aoLer
+  ).then(() => {
+    cameraAtiva = true;
+  }).catch(() => {
+    document.getElementById("leitor").innerHTML =
+      "<p style='color:var(--muted); text-align:center;'>Câmera não disponível. Use o número de inscrição abaixo.</p>";
+    document.getElementById("btn-parar-camera").style.display = "none";
+  });
+});
+
+document.getElementById("btn-parar-camera").addEventListener("click", () => {
+  if (!cameraAtiva) return;
+  html5QrCode.stop().then(() => {
+    cameraAtiva = false;
+    document.getElementById("leitor").style.display = "none";
+    document.getElementById("leitor").innerHTML = "";
+    document.getElementById("btn-ativar-camera").style.display = "block";
+    document.getElementById("btn-parar-camera").style.display = "none";
+  });
+});
+
+// --- Check-in por número de inscrição ---
+document.getElementById("btn-registrar-numero").addEventListener("click", () => {
+  const numero = document.getElementById("numero-inscricao").value.trim();
+  if (!numero) return;
+  registrarCheckin({ numero_inscricao: numero });
+  document.getElementById("numero-inscricao").value = "";
+});
+
+document.getElementById("numero-inscricao").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-registrar-numero").click();
+});
+
+// --- Busca manual por nome/CPF ---
+const inputBusca = document.getElementById("busca");
+const divResultados = document.getElementById("busca-resultados");
+
+inputBusca.addEventListener("input", async () => {
+  const termo = inputBusca.value.trim();
+  if (termo.length < 2) { divResultados.innerHTML = ""; return; }
+
+  const resp = await fetch(`/api/busca?q=${encodeURIComponent(termo)}`);
+  const pessoas = await resp.json();
+
+  divResultados.innerHTML = pessoas.map(p => `
+    <div class="resultado-item">
+      <span>${p.nome} ${p.cpf ? "— " + p.cpf : ""}</span>
+      <button onclick='registrarCheckin({token: "${p.token}"})'>Registrar</button>
+    </div>
+  `).join("") || "<p style='color:var(--muted); font-size:0.85rem;'>Nenhum resultado.</p>";
+});
+</script>
+{% endblock %}

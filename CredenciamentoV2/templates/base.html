@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Gestão do Evento{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <!-- PWA: permite "Adicionar à tela inicial" no celular da recepção -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#1a1035">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("{{ url_for('static', filename='js/sw.js') }}");
+      });
+    }
+  </script>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="{{ url_for('home') }}" class="brand">🎫 UniTalks</a>
+      <nav>
+        <a href="{{ url_for('home') }}" class="nav-link">Início</a>
+        <a href="{{ url_for('inscricao') }}" class="nav-link">Inscrição</a>
+
+        {% if session.get('autenticado') %}
+          <span class="nav-divisor"></span>
+          <a href="{{ url_for('scanner') }}" class="nav-link nav-equipe-ativo">🔓 Check-in/out</a>
+          {% if session.get('nivel') == 'admin' %}
+            <a href="{{ url_for('painel') }}" class="nav-link nav-equipe-ativo">📊 Painel</a>
+          {% endif %}
+          <a href="{{ url_for('logout') }}" class="nav-link nav-sair">Sair</a>
+        {% else %}
+          <span class="nav-divisor"></span>
+          <a href="{{ url_for('login') }}" class="nav-link nav-equipe-login">🔒 Área da Equipe</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for categoria, msg in messages %}
+          <div class="alerta alerta-{{ categoria }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="rodape">Sistema gratuito e local — nenhum dado sai do seu servidor.</footer>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Inscrição confirmada{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px; margin:0 auto; text-align:center;">
+  <h1>Inscrição confirmada ✅</h1>
+  <p>Olá, <strong>{{ p['nome'] }}</strong>! Esta é sua credencial de acesso.</p>
+
+  <div class="numero-inscricao">
+    Inscrição nº <strong>{{ p['numero_inscricao'] }}</strong>
+  </div>
+
+  <p style="color:var(--muted); font-size:0.85rem; margin-top:16px;">
+    Apresente o QR Code abaixo na entrada e na saída do evento. Se a leitura
+    falhar, basta informar o número de inscrição acima.
+  </p>
+
+  <img src="{{ url_for('static', filename='qrcodes/' + p['token'] + '.png') }}"
+       alt="QR Code" style="width:200px; margin:16px auto;">
+
+  <a class="btn orange" href="{{ url_for('credencial_pdf', token=p['token']) }}" target="_blank">
+    📄 Baixar credencial em PDF
+  </a>
+</div>
+{% endblock %}
