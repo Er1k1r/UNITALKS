@@ -40,9 +40,13 @@
 </div>
 
 <div class="card">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <h2 style="margin:0;">Participantes</h2>
-    <a class="btn orange" href="{{ url_for('exportar') }}">⬇ Exportar CSV (Excel)</a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn navy" href="{{ url_for('admin_backup') }}">💾 Baixar backup do banco</a>
+      <a class="btn" style="background:#8a8f98;" href="{{ url_for('admin_backup_testar_email') }}">✉️ Testar backup por e-mail</a>
+      <a class="btn orange" href="{{ url_for('exportar') }}">⬇ Exportar CSV (Excel)</a>
+    </div>
   </div>
 
   <div class="tabela-scroll">

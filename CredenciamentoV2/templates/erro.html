@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px; margin:60px auto 0; text-align:center;">
+  <h1 style="margin-top:0;">😕 {{ titulo }}</h1>
+  <p style="color:var(--muted);">{{ mensagem }}</p>
+  <a class="btn navy" href="{{ url_for('home') }}" style="display:inline-block; margin-top:10px;">
+    Voltar ao início
+  </a>
+</div>
+{% endblock %}

@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Credenciamento{% endblock %}
 {% block content %}
-<div class="card app-scanner">
+<div class="card app-scanner" id="app-scanner-card">
+
+  <div id="overlay-processando" class="overlay-processando">
+    <div class="spinner-moderno"></div>
+    <div class="spinner-texto">
+      Registrando<span class="ponto"></span><span class="ponto"></span><span class="ponto"></span>
+    </div>
+  </div>
+
   <h1 style="margin-top:0;">📷 Credenciamento</h1>
   <p style="color:var(--muted); margin-top:-8px;">
     Toque em "Ler QR Code" para ativar a câmera. A entrada é registrada
@@ -108,15 +116,51 @@ function vibrar() {
   if (navigator.vibrate) navigator.vibrate(120);
 }
 
+// --- Trava contra leitura/clique duplicado -------------------------------
+// Depois de qualquer leitura ou registro manual, tudo fica bloqueado por um
+// tempo mínimo (mesmo que a resposta do servidor volte rápido), evitando
+// que a mesma pessoa seja lida duas vezes seguidas sem querer (câmera
+// continua enxergando o mesmo QR Code por alguns instantes) ou que um
+// duplo-toque no botão registre duas vezes.
+const COOLDOWN_MS = 500;
+let isProcessing = false;
+
+const overlayProcessando = document.getElementById("overlay-processando");
+const btnRegistrarNumero = document.getElementById("btn-registrar-numero");
+const inputNumeroInscricao = document.getElementById("numero-inscricao");
+const inputBuscaEl = document.getElementById("busca");
+const divBuscaResultados = document.getElementById("busca-resultados");
+
+function definirTravado(travado) {
+  isProcessing = travado;
+  overlayProcessando.classList.toggle("ativo", travado);
+
+  btnRegistrarNumero.disabled = travado;
+  inputNumeroInscricao.disabled = travado;
+  inputBuscaEl.disabled = travado;
+  divBuscaResultados.classList.toggle("busca-desabilitada", travado);
+}
+
 async function registrarCheckin(payload) {
+  if (isProcessing) return; // ignora cliques/leituras enquanto já processa
+  const inicio = Date.now();
+  definirTravado(true);
+
   const div = document.getElementById("resultado");
   const divAviso = document.getElementById("aviso-extra");
   divAviso.innerHTML = "";
+
+  const destravarComCooldown = () => {
+    const decorrido = Date.now() - inicio;
+    const restante = Math.max(0, COOLDOWN_MS - decorrido);
+    setTimeout(() => definirTravado(false), restante);
+  };
 
   if (!selectLocal.value) {
     div.className = "resultado-scan erro";
     div.textContent = "❌ Selecione o local (Auditório ou Sala) antes de registrar.";
     bip(false);
+    destravarComCooldown();
     return;
   }
   payload.local = selectLocal.value;
@@ -136,6 +180,7 @@ async function registrarCheckin(payload) {
     div.className = "resultado-scan erro";
     div.textContent = "Falha de conexão com o servidor.";
     bip(false);
+    destravarComCooldown();
     return;
   }
 
@@ -144,6 +189,7 @@ async function registrarCheckin(payload) {
     div.textContent = "❌ " + data.mensagem;
     bip(false);
     vibrar();
+    destravarComCooldown();
     return;
   }
 
@@ -157,6 +203,7 @@ async function registrarCheckin(payload) {
   }
   bip(true);
   vibrar();
+  destravarComCooldown();
 
   clearTimeout(window._limparResultado);
   window._limparResultado = setTimeout(() => {
@@ -172,6 +219,7 @@ let ultimaLeitura = 0;
 let ultimoToken = "";
 
 function aoLer(decodedText) {
+  if (isProcessing) return; // câmera continua "vendo" o QR — ignora nesse intervalo
   const agora = Date.now();
   if (decodedText === ultimoToken && agora - ultimaLeitura < 5000) return;
   ultimaLeitura = agora;
@@ -211,6 +259,7 @@ document.getElementById("btn-parar-camera").addEventListener("click", () => {
 
 // --- Check-in por número de inscrição ---
 document.getElementById("btn-registrar-numero").addEventListener("click", () => {
+  if (isProcessing) return;
   const numero = document.getElementById("numero-inscricao").value.trim();
   if (!numero) return;
   registrarCheckin({ numero_inscricao: numero });

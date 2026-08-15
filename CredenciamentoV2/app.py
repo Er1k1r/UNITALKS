@@ -25,15 +25,23 @@ Nenhum serviço externo pago é necessário.
 
 import csv
 import io
+import logging
 import os
+import smtplib
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from functools import wraps
 
 import qrcode
 from flask import (Flask, g, jsonify, redirect, render_template, request,
                     send_file, session, url_for, flash)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("unitalks")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "evento.db")
@@ -108,9 +116,17 @@ def admin_required(f):
 # ---------------------------------------------------------------------------
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        # timeout=10: se o banco estiver momentaneamente ocupado (duas
+        # leituras de QR Code quase simultâneas), a conexão espera até 10s
+        # em vez de falhar na hora com "database is locked".
+        g.db = sqlite3.connect(DB_PATH, timeout=10)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
+        # WAL permite leituras e escritas simultâneas sem travar o banco —
+        # importante porque o painel pode estar sendo lido (admin) ao mesmo
+        # tempo em que o scanner está gravando check-ins.
+        g.db.execute("PRAGMA journal_mode = WAL")
+        g.db.execute("PRAGMA busy_timeout = 10000")
     return g.db
 
 
@@ -119,6 +135,105 @@ def close_db(exception=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Backup do banco de dados
+# ---------------------------------------------------------------------------
+# O SQLite roda em disco temporário nos planos gratuitos de hospedagem: se o
+# serviço reiniciar, os dados podem se perder. Duas camadas de proteção:
+#  1) Botão "Baixar backup agora" no painel (sob demanda, sempre disponível).
+#  2) Envio automático por e-mail em intervalos regulares, se as variáveis
+#     de ambiente de SMTP estiverem configuradas (ver README).
+def gerar_backup_db() -> bytes:
+    """Gera uma cópia segura e consistente do banco, mesmo com o site em uso
+    (usa a API oficial de backup do SQLite, que não corrompe o arquivo
+    original nem trava as escritas em andamento)."""
+    tmp_path = os.path.join(BASE_DIR, f"_backup_tmp_{uuid.uuid4().hex}.db")
+    origem = sqlite3.connect(DB_PATH)
+    destino = sqlite3.connect(tmp_path)
+    with destino:
+        origem.backup(destino)
+    destino.close()
+    origem.close()
+    try:
+        with open(tmp_path, "rb") as f:
+            dados = f.read()
+    finally:
+        os.remove(tmp_path)
+    return dados
+
+
+def enviar_backup_por_email():
+    """Job periódico: gera o backup e envia por e-mail, se configurado via
+    variáveis de ambiente. Não configurado = não faz nada (sem erro).
+    Retorna (sucesso: bool, mensagem: str) para poder ser usado tanto pelo
+    agendador automático quanto pelo botão de teste manual no painel."""
+    destino = os.environ.get("BACKUP_EMAIL_TO")
+    smtp_host = os.environ.get("BACKUP_SMTP_HOST")
+    smtp_user = os.environ.get("BACKUP_SMTP_USER")
+    smtp_senha = os.environ.get("BACKUP_SMTP_PASSWORD")
+
+    if not (destino and smtp_host and smtp_user and smtp_senha):
+        return False, "Configure BACKUP_EMAIL_TO, BACKUP_SMTP_HOST, BACKUP_SMTP_USER e BACKUP_SMTP_PASSWORD nas variáveis de ambiente."
+
+    try:
+        smtp_port = int(os.environ.get("BACKUP_SMTP_PORT", "587"))
+        agora = datetime.now().strftime("%d/%m/%Y %H:%M")
+        dados = gerar_backup_db()
+
+        msg = MIMEMultipart()
+        msg["Subject"] = f"[UniTalks] Backup automático do evento — {agora}"
+        msg["From"] = smtp_user
+        msg["To"] = destino
+        msg.attach(MIMEText(
+            f"Backup automático gerado em {agora}.\n\n"
+            "Este é um e-mail automático do sistema de credenciamento UniTalks. "
+            "Guarde este arquivo .db como cópia de segurança dos inscritos e check-ins.",
+            "plain",
+        ))
+        anexo = MIMEApplication(dados, Name="backup_unitalks.db")
+        anexo["Content-Disposition"] = 'attachment; filename="backup_unitalks.db"'
+        msg.attach(anexo)
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as smtp:
+            smtp.starttls()
+            smtp.login(smtp_user, smtp_senha)
+            smtp.sendmail(smtp_user, [destino], msg.as_string())
+        logger.info("Backup automático enviado por e-mail para %s", destino)
+        return True, f"Backup enviado com sucesso para {destino}."
+    except Exception as e:
+        logger.exception("Falha ao enviar backup automático por e-mail")
+        return False, f"Falha ao enviar: {e}"
+
+
+def iniciar_agendador_backup():
+    """Liga o agendador de backup em segundo plano, se a biblioteca
+    APScheduler estiver instalada e houver e-mail configurado. Roda dentro
+    do próprio processo web — por isso o Procfile usa 1 worker (com
+    threads), para não disparar o job várias vezes em paralelo."""
+    if not os.environ.get("BACKUP_EMAIL_TO"):
+        return
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+    except ImportError:
+        logger.warning(
+            "BACKUP_EMAIL_TO configurado, mas a biblioteca APScheduler não "
+            "está instalada. Adicione 'APScheduler' ao requirements.txt."
+        )
+        return
+
+    intervalo_min = int(os.environ.get("BACKUP_INTERVAL_MINUTES", "120"))
+    scheduler = BackgroundScheduler(daemon=True, timezone="America/Sao_Paulo")
+    scheduler.add_job(enviar_backup_por_email, "interval", minutes=intervalo_min,
+                       id="backup_email", replace_existing=True)
+    scheduler.start()
+    logger.info("Agendador de backup automático ligado (a cada %s min).", intervalo_min)
+
+
+# Liga o agendador uma vez, quando o módulo é importado (tanto pelo
+# `python app.py` local quanto pelo gunicorn em produção).
+iniciar_agendador_backup()
 
 
 def init_db():
@@ -626,6 +741,33 @@ def api_busca():
 # ---------------------------------------------------------------------------
 # Exportação
 # ---------------------------------------------------------------------------
+@app.route("/admin/backup")
+@admin_required
+def admin_backup():
+    """Baixa uma cópia .db do banco inteiro, na hora, com segurança (mesmo
+    com o site em uso). Use para guardar um backup manual quando quiser,
+    além do backup automático por e-mail (se configurado)."""
+    dados = gerar_backup_db()
+    carimbo = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return send_file(
+        io.BytesIO(dados),
+        mimetype="application/octet-stream",
+        as_attachment=True,
+        download_name=f"backup_unitalks_{carimbo}.db",
+    )
+
+
+@app.route("/admin/backup/testar-email")
+@admin_required
+def admin_backup_testar_email():
+    """Dispara o envio do backup por e-mail na hora, sem esperar o
+    agendador (que roda a cada BACKUP_INTERVAL_MINUTES). Útil para
+    confirmar que as variáveis de SMTP estão certas antes do evento."""
+    sucesso, mensagem = enviar_backup_por_email()
+    flash(("✅ " if sucesso else "❌ ") + mensagem, "sucesso" if sucesso else "erro")
+    return redirect(url_for("painel"))
+
+
 @app.route("/exportar")
 @admin_required
 def exportar():
@@ -679,6 +821,23 @@ def exportar():
         as_attachment=True,
         download_name="relatorio_evento.csv",
     )
+
+
+@app.errorhandler(500)
+def erro_500(e):
+    logger.exception("Erro interno não tratado")
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "mensagem": "Erro interno. Tente novamente em instantes."}), 500
+    return render_template("erro.html", titulo="Ops, algo deu errado",
+                            mensagem="Ocorreu um erro interno. Tente novamente em instantes."), 500
+
+
+@app.errorhandler(404)
+def erro_404(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "mensagem": "Recurso não encontrado."}), 404
+    return render_template("erro.html", titulo="Página não encontrada",
+                            mensagem="O endereço acessado não existe."), 404
 
 
 if __name__ == "__main__":
