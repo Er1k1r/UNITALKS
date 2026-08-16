@@ -44,12 +44,25 @@ body {
   text-decoration: none;
   font-size: 1.1rem;
   letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-icone {
+  height: 26px;
+  width: auto;
 }
 
 .topbar-marca {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.topbar-logo-unipe {
+  height: 42px;
+  width: auto;
 }
 
 /* --- Atalhos rápidos (Mapa / Cronograma) ---
@@ -551,6 +564,27 @@ th { color: var(--navy); font-size: 0.8rem; text-transform: uppercase; letter-sp
   box-shadow: 0 4px 14px rgba(224, 97, 26, 0.35);
 }
 .btn-inscricao:hover { filter: brightness(1.05); }
+
+.selo-instituicao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 6px 12px 6px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  width: fit-content;
+}
+.selo-instituicao-logo {
+  height: 32px;
+  width: auto;
+}
+.selo-instituicao span {
+  color: #c9c4dd;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
 
 @media (max-width: 600px) {
   .hero { flex-direction: column; text-align: center; }

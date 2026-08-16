@@ -24,7 +24,11 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-marca">
-        <a href="{{ url_for('home') }}" class="brand">🎫 UniTalks</a>
+        <img src="{{ url_for('static', filename='img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe">
+        <a href="{{ url_for('home') }}" class="brand">
+          <img src="{{ url_for('static', filename='img/icone_unitalks.png') }}" alt="" class="brand-icone">
+          UniTalks
+        </a>
       </div>
       <nav>
         <a href="{{ url_for('home') }}" class="nav-link">Início</a>
