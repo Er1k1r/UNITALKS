@@ -57,8 +57,8 @@ app.secret_key = os.environ.get("SECRET_KEY", "troque-esta-chave-em-producao")
 #  - NORMAL: acesso só ao check-in/check-out (scanner). Sem painel.
 # Em produção (Render), defina as variáveis de ambiente ADMIN_PASSWORD e
 # ACCESS_PASSWORD no lugar dos valores padrão abaixo.
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ADMUNiTALKS2026")
-ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "unitalks2026")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ADMINNEGOCIOS2026")
+ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "CRED2026")
 
 # Cada dispositivo/navegador que fizer login fica com sua própria sessão,
 # válida por várias horas — assim, várias pessoas da equipe podem estar
@@ -757,14 +757,23 @@ def admin_backup():
     )
 
 
-@app.route("/admin/backup/testar-email")
+@app.route("/admin/participante/<int:participante_id>/excluir", methods=["POST"])
 @admin_required
-def admin_backup_testar_email():
-    """Dispara o envio do backup por e-mail na hora, sem esperar o
-    agendador (que roda a cada BACKUP_INTERVAL_MINUTES). Útil para
-    confirmar que as variáveis de SMTP estão certas antes do evento."""
-    sucesso, mensagem = enviar_backup_por_email()
-    flash(("✅ " if sucesso else "❌ ") + mensagem, "sucesso" if sucesso else "erro")
+def admin_excluir_participante(participante_id):
+    """Exclui um único inscrito e todo o seu histórico de check-in/check-out.
+    Usado quando alguém se inscreveu por engano, duplicado, ou desistiu."""
+    db = get_db()
+    p = db.execute("SELECT nome FROM participantes WHERE id = ?", (participante_id,)).fetchone()
+    if not p:
+        flash("❌ Participante não encontrado (talvez já tenha sido excluído).", "erro")
+        return redirect(url_for("painel"))
+
+    db.execute("DELETE FROM eventos_acesso WHERE participante_id = ?", (participante_id,))
+    db.execute("DELETE FROM participantes WHERE id = ?", (participante_id,))
+    db.commit()
+
+    logger.info("Participante excluído pelo admin: %s (id=%s)", p["nome"], participante_id)
+    flash(f"🗑️ Inscrição de \"{p['nome']}\" excluída com sucesso.", "sucesso")
     return redirect(url_for("painel"))
 
 

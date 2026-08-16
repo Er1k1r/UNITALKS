@@ -13,6 +13,9 @@
       <a class="data-pill data-pill-mapa" href="https://maps.app.goo.gl/G4S6b5fQjuUWZs8x6" target="_blank" rel="noopener">
         🗺️ Como chegar
       </a>
+      <a class="data-pill data-pill-insta" href="https://www.instagram.com/unitalks_2026.2?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener">
+        📸 Instagram
+      </a>
     </div>
     <a class="btn btn-inscricao" href="{{ url_for('inscricao') }}">
       Fazer Inscrição ↗
@@ -30,7 +33,22 @@
   </p>
 </div>
 
-<div class="cronograma-card">
+<div class="card mapa-card" id="mapa">
+  <h1 style="margin-top:0;">🗺️ Mapa do evento</h1>
+  <p class="mapa-descricao">
+    Veja por onde entrar e o caminho até cada dia de credenciamento dentro do campus.
+  </p>
+  <div class="mapa-imagem-wrap">
+    <img src="{{ url_for('static', filename='img/mapa_evento.jpg') }}" alt="Mapa do campus com o trajeto até o evento" class="mapa-imagem">
+  </div>
+  <div class="mapa-legenda">
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#1c7a4d;"></span> 1º Dia — Auditório</span>
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#0b2f66;"></span> 2º Dia — EVA</span>
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#8b1e2b;"></span> Trajeto sugerido</span>
+  </div>
+</div>
+
+<div class="cronograma-card" id="cronograma">
   <h1 class="cronograma-titulo">📅 Cronograma</h1>
 
   <div class="dia-evento">

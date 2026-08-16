@@ -44,7 +44,6 @@
     <h2 style="margin:0;">Participantes</h2>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn navy" href="{{ url_for('admin_backup') }}">💾 Baixar backup do banco</a>
-      <a class="btn" style="background:#8a8f98;" href="{{ url_for('admin_backup_testar_email') }}">✉️ Testar backup por e-mail</a>
       <a class="btn orange" href="{{ url_for('exportar') }}">⬇ Exportar CSV (Excel)</a>
     </div>
   </div>
@@ -63,6 +62,7 @@
         <th>Inscrito em</th>
         <th>Onde está agora</th>
         <th>Histórico de check-in / check-out</th>
+        <th>Ações</th>
       </tr>
     </thead>
     <tbody>
@@ -121,9 +121,15 @@
               <span style="color:var(--muted); font-size:0.85rem;">Sem registros</span>
             {% endif %}
           </td>
+          <td>
+            <form method="post" action="{{ url_for('admin_excluir_participante', participante_id=p['id']) }}"
+                  onsubmit="return confirm('Excluir a inscrição de ' + {{ p['nome']|tojson }} + ' e todos os check-ins dela? Essa ação não pode ser desfeita.');">
+              <button type="submit" class="btn-excluir" title="Excluir esta inscrição">🗑️ Excluir</button>
+            </form>
+          </td>
         </tr>
       {% else %}
-        <tr><td colspan="10" style="color:var(--muted); text-align:center;">Nenhum participante inscrito ainda.</td></tr>
+        <tr><td colspan="11" style="color:var(--muted); text-align:center;">Nenhum participante inscrito ainda.</td></tr>
       {% endfor %}
     </tbody>
   </table>

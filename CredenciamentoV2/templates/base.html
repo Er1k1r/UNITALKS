@@ -23,7 +23,9 @@
   </script>
   <header class="topbar">
     <div class="topbar-inner">
-      <a href="{{ url_for('home') }}" class="brand">🎫 UniTalks</a>
+      <div class="topbar-marca">
+        <a href="{{ url_for('home') }}" class="brand">🎫 UniTalks</a>
+      </div>
       <nav>
         <a href="{{ url_for('home') }}" class="nav-link">Início</a>
         <a href="{{ url_for('inscricao') }}" class="nav-link">Inscrição</a>
@@ -55,6 +57,77 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="rodape">Sistema gratuito e local — nenhum dado sai do seu servidor.</footer>
+  <!-- Atalhos rápidos: aproveita o espaço vazio da lateral em telas largas -->
+  <div class="atalhos-lateral">
+    <a href="{{ url_for('home') }}#mapa" class="atalho-lateral-item">
+      <span class="atalho-lateral-icone">🗺️</span>
+      <span class="atalho-lateral-texto">Mapa do<br>evento</span>
+    </a>
+    <a href="{{ url_for('home') }}#cronograma" class="atalho-lateral-item">
+      <span class="atalho-lateral-icone">📅</span>
+      <span class="atalho-lateral-texto">Cronograma</span>
+    </a>
+  </div>
+
+  <!-- 🐣 Easter egg: digite "bob" em qualquer lugar do site -->
+  <div id="bob-overlay" class="bob-overlay">
+    <div class="bob-caixa">
+      <div class="bob-emoji">🕵️‍♂️</div>
+      <div class="bob-titulo">Você encontrou o BOB!</div>
+      <div class="bob-texto">Ele estava só de passagem pelo UniTalks 2026 👀✨</div>
+      <button type="button" class="bob-fechar" onclick="fecharBob()">Fechar</button>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const alvo = "bob";
+      let buffer = "";
+      let ultimoTempo = 0;
+
+      window.addEventListener("keydown", (e) => {
+        // Ignora se a pessoa estiver digitando dentro de um campo de formulário
+        const tag = (e.target.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "textarea" || tag === "select") return;
+        if (e.key.length !== 1) return;
+
+        const agora = Date.now();
+        if (agora - ultimoTempo > 2000) buffer = "";
+        ultimoTempo = agora;
+
+        buffer = (buffer + e.key.toLowerCase()).slice(-alvo.length);
+        if (buffer === alvo) {
+          mostrarBob();
+          buffer = "";
+        }
+      });
+    })();
+
+    function mostrarBob() {
+      const overlay = document.getElementById("bob-overlay");
+      overlay.classList.add("ativo");
+      gerarConfetesBob();
+      clearTimeout(window._bobTimeout);
+      window._bobTimeout = setTimeout(fecharBob, 5000);
+    }
+
+    function fecharBob() {
+      document.getElementById("bob-overlay").classList.remove("ativo");
+    }
+
+    function gerarConfetesBob() {
+      const overlay = document.getElementById("bob-overlay");
+      const cores = ["#f2a71b", "#d94f8c", "#8b5cf6", "#22c55e", "#38bdf8"];
+      for (let i = 0; i < 26; i++) {
+        const c = document.createElement("span");
+        c.className = "bob-confete";
+        c.style.left = Math.random() * 100 + "%";
+        c.style.background = cores[i % cores.length];
+        c.style.animationDelay = (Math.random() * 0.4) + "s";
+        c.style.animationDuration = (1.6 + Math.random() * 1.2) + "s";
+        overlay.appendChild(c);
+        setTimeout(() => c.remove(), 3200);
+      }
+    }
+  </script>
 </body>
 </html>

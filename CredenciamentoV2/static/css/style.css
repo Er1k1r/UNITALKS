@@ -12,6 +12,8 @@
 
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
   margin: 0;
   font-family: "Segoe UI", Aptos, Arial, sans-serif;
@@ -42,6 +44,73 @@ body {
   text-decoration: none;
   font-size: 1.1rem;
   letter-spacing: 0.01em;
+}
+
+.topbar-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- Atalhos rápidos (Mapa / Cronograma) ---
+   Em telas largas, aproveita o espaço vazio na lateral, fora do conteúdo
+   central. Em telas menores (sem espaço sobrando), vira um mini-menu
+   flutuante e discreto no canto inferior direito. */
+.atalhos-lateral {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  bottom: 20px;
+  right: 16px;
+}
+
+.atalho-lateral-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2a0f3d, #3a1240);
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 14px rgba(20, 10, 40, 0.3);
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.atalho-lateral-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(20, 10, 40, 0.4);
+}
+.atalho-lateral-icone { font-size: 1.2rem; }
+.atalho-lateral-texto { display: none; }
+
+@media (min-width: 1300px) {
+  .atalhos-lateral {
+    top: 50%;
+    bottom: auto;
+    right: 28px;
+    transform: translateY(-50%);
+    gap: 14px;
+  }
+  .atalho-lateral-item {
+    width: auto;
+    height: auto;
+    flex-direction: column;
+    border-radius: 16px;
+    padding: 16px 14px;
+    gap: 6px;
+  }
+  .atalho-lateral-icone { font-size: 1.5rem; }
+  .atalho-lateral-texto {
+    display: block;
+    color: #e9e6f5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.25;
+  }
 }
 
 .topbar nav {
@@ -462,6 +531,15 @@ th { color: var(--navy); font-size: 0.8rem; text-transform: uppercase; letter-sp
 }
 .data-pill-mapa:hover { filter: brightness(1.15); }
 
+.data-pill-insta {
+  text-decoration: none;
+  background: linear-gradient(90deg, rgba(240,148,51,0.28), rgba(230,58,132,0.28), rgba(188,42,178,0.28));
+  border-color: rgba(230,58,132,0.5);
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+.data-pill-insta:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
 .btn-inscricao {
   background: linear-gradient(90deg, #f2a71b, #e0611a);
   color: white;
@@ -503,6 +581,149 @@ th { color: var(--navy); font-size: 0.8rem; text-transform: uppercase; letter-sp
   line-height: 1.65;
   margin: 0;
 }
+
+/* --- Mapa do evento (mesmo fundo do card de Cronograma, pra combinar) --- */
+.mapa-card {
+  background: linear-gradient(160deg, #170a2e 0%, #1a1035 35%, #2a0f3d 70%, #3a1240 100%);
+  border-radius: 14px;
+  padding: 30px 26px;
+  color: #e9e6f5;
+  border: none;
+}
+.mapa-card h1 { margin-bottom: 4px; color: white; }
+.mapa-descricao { color: #c9c4dd; margin-top: -8px; }
+.mapa-imagem-wrap {
+  margin: 16px 0 4px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.mapa-imagem {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mapa-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+.mapa-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #c9c4dd;
+}
+.mapa-cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* --- Easter egg "BOB" --- */
+.bob-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 20, 0.55);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  overflow: hidden;
+}
+.bob-overlay.ativo {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bob-caixa {
+  background: linear-gradient(160deg, #170a2e 0%, #1a1035 45%, #3a1240 100%);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 32px 30px;
+  max-width: 320px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  transform: scale(0.85) translateY(10px);
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.bob-overlay.ativo .bob-caixa {
+  transform: scale(1) translateY(0);
+}
+
+.bob-emoji {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  animation: bob-flutuar 1.6s ease-in-out infinite;
+}
+@keyframes bob-flutuar {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
+}
+
+.bob-titulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #f2a71b, #d94f8c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 6px;
+}
+.bob-texto {
+  font-size: 0.88rem;
+  color: #d8cdee;
+  margin-bottom: 18px;
+}
+.bob-fechar {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bob-fechar:hover { background: rgba(255,255,255,0.22); }
+
+.bob-confete {
+  position: absolute;
+  top: -10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: bob-cair linear forwards;
+  pointer-events: none;
+}
+@keyframes bob-cair {
+  to { transform: translateY(110vh) rotate(540deg); opacity: 0.2; }
+}
+
+/* --- Botão de excluir inscrição individual (na tabela do painel) --- */
+.btn-excluir {
+  background: #fdecea;
+  color: #a5271e;
+  border: 1px solid #f3c3bd;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-excluir:hover { background: #f8d3ce; }
 
 .tipo-opcoes {
   display: flex;

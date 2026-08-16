@@ -35,8 +35,8 @@ tem **duas senhas diferentes**, dando acessos diferentes:
 
 | Acesso | Senha padrão | Pode acessar |
 |---|---|---|
-| **ADM** | `ADMUNiTALKS2026` | Check-in/check-out (`/scanner`) **+** Painel (`/painel`) **+** Exportar CSV (`/exportar`) |
-| **Equipe normal** | `unitalks2026` | Somente check-in/check-out (`/scanner`) |
+| **ADM** | `ADMINNEGOCIOS2026` | Check-in/check-out (`/scanner`) **+** Painel (`/painel`) **+** Exportar CSV (`/exportar`) |
+| **Equipe normal** | `CRED2026` | Somente check-in/check-out (`/scanner`) |
 
 Quem loga com a senha normal **não vê o link do Painel no menu** e, se
 tentar acessar `/painel` ou `/exportar` diretamente pela URL, é redirecionado
