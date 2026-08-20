@@ -3,8 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Gestão do Evento{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta name="description" content="UniTalks 2026 — Um negócio por trás dos negócios. Evento acadêmico do curso de negócios do Centro Universitário UNIPÊ, com palestras, networking e experiências sobre empreendedorismo e mercado de trabalho. Inscrição gratuita.">
+  <title>{% block title %}Gestão do Evento{% endblock %} · UniTalks 2026</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
+
+  <!-- Tipografia: preconnect + font-display=swap evitam texto invisível
+       durante o carregamento (o navegador mostra a fonte de sistema até a
+       fonte da web chegar, sem "flash em branco"). Só os pesos usados de
+       verdade no site são carregados, pra não pesar a página. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ static_v('css/style.css') }}">
 
   <!-- PWA: permite "Adicionar à tela inicial" no celular da recepção -->
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
@@ -24,9 +35,9 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-marca">
-        <img src="{{ url_for('static', filename='img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe">
+        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe" width="160" height="160">
         <a href="{{ url_for('home') }}" class="brand">
-          <img src="{{ url_for('static', filename='img/icone_unitalks.png') }}" alt="" class="brand-icone">
+          <img src="{{ static_v('img/icone_unitalks.png') }}" alt="" class="brand-icone" width="129" height="160">
           UniTalks
         </a>
       </div>
@@ -61,7 +72,9 @@
     {% block content %}{% endblock %}
   </main>
 
-  <!-- Atalhos rápidos: aproveita o espaço vazio da lateral em telas largas -->
+  <!-- Atalhos rápidos: só faz sentido na Início, onde as seções existem.
+       Aproveita o espaço vazio da lateral em telas largas. -->
+  {% if request.endpoint == 'home' %}
   <div class="atalhos-lateral">
     <a href="{{ url_for('home') }}#mapa" class="atalho-lateral-item">
       <span class="atalho-lateral-icone">🗺️</span>
@@ -72,6 +85,7 @@
       <span class="atalho-lateral-texto">Cronograma</span>
     </a>
   </div>
+  {% endif %}
 
   <!-- 🐣 Easter egg: digite "bob" em qualquer lugar do site -->
   <div id="bob-overlay" class="bob-overlay">

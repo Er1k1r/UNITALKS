@@ -25,8 +25,21 @@
       ⚠️ Por favor, use seu <strong>e-mail institucional</strong> (o mesmo cadastrado na faculdade).
     </p>
 
-    <label for="formacao">Formação / Curso</label>
-    <input type="text" id="formacao" name="formacao" placeholder="Ex: Administração, Ciências Contábeis...">
+    <div id="grupo-aluno" style="display:none;">
+      <label for="curso">Curso</label>
+      <input type="text" id="curso" name="curso" placeholder="Ex: Administração">
+
+      <label for="periodo">Período</label>
+      <input type="text" id="periodo" name="periodo" placeholder="Ex: 5º período">
+
+      <label for="rgm">RGM (matrícula)</label>
+      <input type="text" id="rgm" name="rgm" inputmode="numeric" placeholder="Seu número de matrícula">
+    </div>
+
+    <div id="grupo-formacao">
+      <label for="formacao">Formação / Área de atuação</label>
+      <input type="text" id="formacao" name="formacao" placeholder="Ex: Administração, Ciências Contábeis...">
+    </div>
 
     <label for="instituicao" id="label-instituicao">Instituição</label>
     <input type="text" id="instituicao" name="instituicao" placeholder="Empresa, faculdade de origem, etc.">
@@ -53,12 +66,21 @@ const radiosTipo = document.querySelectorAll('input[name="tipo"]');
 const avisoEmail = document.getElementById("aviso-email-institucional");
 const labelInstituicao = document.getElementById("label-instituicao");
 const inputInstituicao = document.getElementById("instituicao");
+const grupoAluno = document.getElementById("grupo-aluno");
+const grupoFormacao = document.getElementById("grupo-formacao");
 
 function atualizarFormulario() {
   const selecionado = document.querySelector('input[name="tipo"]:checked');
   if (!selecionado) return;
 
-  if (selecionado.value === "aluno") {
+  const ehAluno = selecionado.value === "aluno";
+
+  // Curso / Período / RGM: só pra aluno. "Formação": só pra externo
+  // (evita duplicidade de informação — o aluno já detalha o curso).
+  grupoAluno.style.display = ehAluno ? "block" : "none";
+  grupoFormacao.style.display = ehAluno ? "none" : "block";
+
+  if (ehAluno) {
     avisoEmail.style.display = "block";
     labelInstituicao.textContent = "Instituição (sua faculdade)";
     inputInstituicao.placeholder = "Ex: Unipê";

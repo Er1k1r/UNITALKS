@@ -27,6 +27,7 @@ import csv
 import io
 import logging
 import os
+import secrets
 import smtplib
 import sqlite3
 import uuid
@@ -48,9 +49,36 @@ DB_PATH = os.path.join(BASE_DIR, "evento.db")
 QR_DIR = os.path.join(BASE_DIR, "static", "qrcodes")
 
 app = Flask(__name__)
+# Cache de 7 dias para arquivos estáticos (CSS, imagens) — o navegador do
+# recepcionista/participante não precisa baixar tudo de novo a cada visita.
+# Como esses arquivos raramente mudam durante o evento, isso reduz bastante
+# o tempo de carregamento nas visitas seguintes.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60 * 60 * 24 * 7
+
+
+@app.context_processor
+def util_static_versionado():
+    """Acrescenta ?v=<data de modificação> automaticamente em toda URL de
+    /static usada nos templates. Assim, o navegador pode cachear os
+    arquivos por 7 dias com segurança: se um arquivo for atualizado (ex.:
+    trocar uma imagem), o carimbo muda sozinho e o navegador busca a
+    versão nova, sem precisar esperar o cache expirar."""
+    def static_v(filename):
+        caminho = os.path.join(app.static_folder, filename)
+        try:
+            versao = int(os.path.getmtime(caminho))
+        except OSError:
+            versao = 0
+        return url_for("static", filename=filename, v=versao)
+    return {"static_v": static_v}
 # Em produção (Render), defina a variável de ambiente SECRET_KEY com um
-# valor aleatório. Localmente, o valor abaixo já funciona para testes.
-app.secret_key = os.environ.get("SECRET_KEY", "troque-esta-chave-em-producao")
+# valor fixo e aleatório (veja o README). Se não for definida, o sistema
+# gera uma chave nova e aleatória a cada reinício do servidor — isso é
+# mais seguro que um valor fixo no código, e tem como efeito colateral
+# desejado: toda sessão antiga (de testes, de qualquer navegador) é
+# automaticamente invalidada sempre que o serviço reinicia, então
+# ninguém consegue abrir o site já "logado" sem querer.
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
 # Duas senhas de equipe:
 #  - ADMIN: acesso total (check-in/check-out + painel + exportação).
@@ -250,6 +278,9 @@ def init_db():
             instituicao TEXT,
             cpf TEXT,
             empresa TEXT,
+            curso TEXT,
+            periodo TEXT,
+            rgm TEXT,
             numero_inscricao INTEGER UNIQUE,
             token TEXT UNIQUE NOT NULL,
             criado_em TEXT NOT NULL
@@ -275,6 +306,9 @@ def init_db():
         "ALTER TABLE participantes ADD COLUMN formacao TEXT",
         "ALTER TABLE participantes ADD COLUMN instituicao TEXT",
         "ALTER TABLE participantes ADD COLUMN cpf TEXT",
+        "ALTER TABLE participantes ADD COLUMN curso TEXT",
+        "ALTER TABLE participantes ADD COLUMN periodo TEXT",
+        "ALTER TABLE participantes ADD COLUMN rgm TEXT",
         "ALTER TABLE eventos_acesso ADD COLUMN local TEXT",
     ]
     for comando in colunas_novas:
@@ -304,7 +338,13 @@ def gerar_qrcode(token: str) -> str:
 
 
 def gerar_pdf_credencial(participante) -> bytes:
-    """Gera a credencial em PDF: QR Code + nome + número de inscrição."""
+    """Gera a credencial em PDF: QR Code + nome + número de inscrição.
+
+    Visual alinhado à identidade do site (gradiente roxo-escuro → magenta,
+    selo em degradê laranja/rosa para o número) e ao motivo de "ingresso":
+    um canhoto perfurado separa a credencial das instruções, como em um
+    ticket de verdade.
+    """
     from reportlab.lib.pagesizes import A5
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
@@ -313,28 +353,75 @@ def gerar_pdf_credencial(participante) -> bytes:
     largura, altura = A5
     c = canvas.Canvas(buffer, pagesize=A5)
 
-    # Faixa de topo
-    c.setFillColorRGB(0.06, 0.16, 0.29)  # navy
-    c.rect(0, altura - 28 * mm, largura, 28 * mm, fill=1, stroke=0)
-    c.setFillColorRGB(1, 1, 1)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(largura / 2, altura - 12 * mm, "UNI TALKS")
-    c.setFont("Helvetica", 9)
-    c.drawCentredString(largura / 2, altura - 19 * mm, "Um negócio por trás dos negócios")
+    # Fundo levemente creme (mais quente que branco puro), pra combinar
+    # com o restante do material do evento e não parecer um PDF genérico.
+    c.setFillColorRGB(0.985, 0.98, 0.975)
+    c.rect(0, 0, largura, altura, fill=1, stroke=0)
 
-    # QR Code
+    # --- Cabeçalho em degradê (roxo-escuro → magenta), como no site ---
+    faixa_altura = 44 * mm
+    faixa_y0 = altura - faixa_altura
+    n_faixas = 48
+    cor_inicio = (0x19 / 255, 0x1a / 255, 0x32 / 255)   # #191a32 (bg-deep)
+    cor_fim = (0x8a / 255, 0x4f / 255, 0x6b / 255)       # #8a4f6b (bg-dawn)
+    for i in range(n_faixas):
+        t = i / (n_faixas - 1)
+        r = cor_inicio[0] + (cor_fim[0] - cor_inicio[0]) * t
+        g = cor_inicio[1] + (cor_fim[1] - cor_inicio[1]) * t
+        b = cor_inicio[2] + (cor_fim[2] - cor_inicio[2]) * t
+        c.setFillColorRGB(r, g, b)
+        h = faixa_altura / n_faixas
+        c.rect(0, faixa_y0 + i * h, largura, h + 0.5, fill=1, stroke=0)
+
+    # Logo (ícone) + nome do evento, lado a lado, centralizados
+    logo_path = os.path.join(BASE_DIR, "static", "img", "icone_unitalks.png")
+    titulo = "UNITALKS"
+    c.setFont("Helvetica-Bold", 20)
+    largura_titulo = c.stringWidth(titulo, "Helvetica-Bold", 20)
+    logo_tam = 9 * mm
+    espaco = 3 * mm
+    bloco_largura = logo_tam + espaco + largura_titulo
+    bloco_x = (largura - bloco_largura) / 2
+    centro_y = altura - 17 * mm
+
+    if os.path.exists(logo_path):
+        c.drawImage(
+            logo_path, bloco_x, centro_y - logo_tam / 2.4, width=logo_tam, height=logo_tam,
+            mask="auto", preserveAspectRatio=True,
+        )
+    c.setFillColorRGB(1, 1, 1)
+    c.drawString(bloco_x + logo_tam + espaco, centro_y - 6, titulo)
+
+    c.setFont("Helvetica", 9.5)
+    c.setFillColorRGB(0.89, 0.867, 0.937)  # tom claro seguro (mesmo do site)
+    c.drawCentredString(largura / 2, altura - 26 * mm, "Um negócio por trás dos negócios")
+    c.setFont("Helvetica", 7.5)
+    c.setFillColorRGB(0.8, 0.77, 0.85)
+    c.drawCentredString(largura / 2, altura - 31 * mm, "Evento licenciado pelo Centro Universitário UNIPÊ")
+
+    # --- Corpo: QR Code com moldura sutil ---
     qr_path = os.path.join(QR_DIR, f"{participante['token']}.png")
-    qr_tamanho = 70 * mm
+    qr_tamanho = 64 * mm
     qr_x = (largura - qr_tamanho) / 2
-    qr_y = altura - 45 * mm - qr_tamanho
+    qr_y = faixa_y0 - 12 * mm - qr_tamanho
+
+    moldura_pad = 4 * mm
+    c.setFillColorRGB(1, 1, 1)
+    c.setStrokeColorRGB(0.87, 0.85, 0.9)
+    c.roundRect(
+        qr_x - moldura_pad, qr_y - moldura_pad,
+        qr_tamanho + 2 * moldura_pad, qr_tamanho + 2 * moldura_pad,
+        6, fill=1, stroke=1,
+    )
     c.drawImage(qr_path, qr_x, qr_y, width=qr_tamanho, height=qr_tamanho)
 
-    # Nome
-    c.setFillColorRGB(0.06, 0.16, 0.29)
-    c.setFont("Helvetica-Bold", 15)
-    c.drawCentredString(largura / 2, qr_y - 12 * mm, participante["nome"])
+    # --- Nome do participante ---
+    y_cursor = qr_y - moldura_pad - 11 * mm
+    c.setFillColorRGB(0.09, 0.04, 0.18)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(largura / 2, y_cursor, participante["nome"])
 
-    # Tipo + Instituição (se preenchidos)
+    # --- Tipo + instituição (se preenchidos) ---
     linha_extra = ""
     if participante["tipo"] == "aluno":
         linha_extra = "Aluno(a)"
@@ -343,27 +430,66 @@ def gerar_pdf_credencial(participante) -> bytes:
     if participante["instituicao"]:
         linha_extra = f"{linha_extra} — {participante['instituicao']}" if linha_extra else participante["instituicao"]
 
-    proxima_linha_y = qr_y - 19 * mm
     if linha_extra:
+        y_cursor -= 7 * mm
         c.setFont("Helvetica", 10)
-        c.setFillColorRGB(0.4, 0.44, 0.49)
-        c.drawCentredString(largura / 2, proxima_linha_y, linha_extra)
-        proxima_linha_y -= 9 * mm
-    else:
-        proxima_linha_y -= 3 * mm
+        c.setFillColorRGB(0.45, 0.42, 0.52)
+        c.drawCentredString(largura / 2, y_cursor, linha_extra)
 
-    # Número de inscrição (destaque)
+    # --- Selo do número de inscrição, em degradê laranja → rosa ---
+    y_cursor -= 13 * mm
+    texto_num = f"Inscrição nº {participante['numero_inscricao']}"
     c.setFont("Helvetica-Bold", 13)
-    c.setFillColorRGB(0.88, 0.48, 0.10)  # laranja
-    c.drawCentredString(
-        largura / 2, proxima_linha_y, f"Inscrição nº {participante['numero_inscricao']}"
-    )
+    largura_texto = c.stringWidth(texto_num, "Helvetica-Bold", 13)
+    selo_largura = largura_texto + 16 * mm
+    selo_altura = 10 * mm
+    selo_x = (largura - selo_largura) / 2
+    selo_y = y_cursor - selo_altura / 2.6
 
-    c.setFont("Helvetica", 8)
-    c.setFillColorRGB(0.4, 0.44, 0.49)
+    n_fatias = 40
+    cor_a = (0xff / 255, 0xc1 / 255, 0x57 / 255)  # dourado
+    cor_b = (0xff / 255, 0x6b / 255, 0x4a / 255)  # coral
+    c.saveState()
+    caminho_clip = c.beginPath()
+    caminho_clip.roundRect(selo_x, selo_y, selo_largura, selo_altura, selo_altura / 2)
+    c.clipPath(caminho_clip, stroke=0)
+    for i in range(n_fatias):
+        t = i / (n_fatias - 1)
+        r = cor_a[0] + (cor_b[0] - cor_a[0]) * t
+        g = cor_a[1] + (cor_b[1] - cor_a[1]) * t
+        b = cor_a[2] + (cor_b[2] - cor_a[2]) * t
+        c.setFillColorRGB(r, g, b)
+        w = selo_largura / n_fatias
+        c.rect(selo_x + i * w, selo_y, w + 0.5, selo_altura, fill=1, stroke=0)
+    c.restoreState()
+
+    c.setFillColorRGB(0x1b / 255, 0x15 / 255, 0x33 / 255)  # tinta escura (contraste sobre dourado/coral)
+    c.setFont("Helvetica-Bold", 13)
+    c.drawCentredString(largura / 2, selo_y + selo_altura / 2 - 4.6, texto_num)
+
+    # --- Canhoto perfurado, como em um ingresso de verdade ---
+    linha_perfuracao_y = 26 * mm
+    c.setFillColorRGB(0.985, 0.98, 0.975)
+    c.circle(0, linha_perfuracao_y, 4 * mm, fill=1, stroke=0)
+    c.circle(largura, linha_perfuracao_y, 4 * mm, fill=1, stroke=0)
+    c.setDash(3, 3)
+    c.setStrokeColorRGB(0.75, 0.72, 0.8)
+    c.setLineWidth(1)
+    c.line(6 * mm, linha_perfuracao_y, largura - 6 * mm, linha_perfuracao_y)
+    c.setDash()
+
+    # --- Instruções no canhoto ---
+    c.setFont("Helvetica", 8.5)
+    c.setFillColorRGB(0.45, 0.42, 0.52)
     c.drawCentredString(
-        largura / 2, 12 * mm,
-        "Apresente este QR Code (ou informe o número acima) no credenciamento."
+        largura / 2, linha_perfuracao_y - 8 * mm,
+        "Apresente este QR Code (ou informe o número acima) no credenciamento.",
+    )
+    c.setFont("Helvetica", 7)
+    c.setFillColorRGB(0.6, 0.57, 0.68)
+    c.drawCentredString(
+        largura / 2, linha_perfuracao_y - 13 * mm,
+        "16 e 17 de setembro de 2026 · Avenida Diógenes Chianca, João Pessoa - PB",
     )
 
     c.showPage()
@@ -449,6 +575,23 @@ def home():
     return render_template("home.html")
 
 
+def proximo_numero_inscricao(db) -> int:
+    """Calcula o próximo número de inscrição a ser usado, REAPROVEITANDO
+    números liberados por exclusões. Ex.: se 202601 está em uso e 202602 foi
+    excluído, o próximo inscrito recebe 202602 (não 202603) — a numeração
+    nunca fica com "buracos" enquanto houver um número livre mais baixo."""
+    usados = {
+        row["numero_inscricao"]
+        for row in db.execute(
+            "SELECT numero_inscricao FROM participantes WHERE numero_inscricao IS NOT NULL"
+        ).fetchall()
+    }
+    candidato = NUMERO_INSCRICAO_BASE + 1
+    while candidato in usados:
+        candidato += 1
+    return candidato
+
+
 # ---------------------------------------------------------------------------
 # Rotas públicas: inscrição
 # ---------------------------------------------------------------------------
@@ -461,6 +604,16 @@ def inscricao():
         formacao = request.form.get("formacao", "").strip()
         instituicao = request.form.get("instituicao", "").strip()
         cpf = request.form.get("cpf", "").strip()
+        # Curso, período e RGM só fazem sentido pra quem é aluno — mesmo
+        # que o campo tenha sido preenchido no navegador (ex.: JS
+        # desabilitado), ignoramos esses valores se a pessoa marcou
+        # "participante externo", pra manter o banco consistente.
+        if tipo == "aluno":
+            curso = request.form.get("curso", "").strip()
+            periodo = request.form.get("periodo", "").strip()
+            rgm = request.form.get("rgm", "").strip()
+        else:
+            curso = periodo = rgm = ""
 
         if not nome:
             flash("O nome é obrigatório.", "erro")
@@ -472,18 +625,27 @@ def inscricao():
 
         token = uuid.uuid4().hex[:12]
         db = get_db()
-        cursor = db.execute(
-            "INSERT INTO participantes (nome, tipo, email, formacao, instituicao, cpf, token, criado_em) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (nome, tipo, email, formacao, instituicao, cpf, token, datetime.now().isoformat(timespec="seconds")),
-        )
-        novo_id = cursor.lastrowid
-        numero_inscricao = NUMERO_INSCRICAO_BASE + novo_id
-        db.execute(
-            "UPDATE participantes SET numero_inscricao = ? WHERE id = ?",
-            (numero_inscricao, novo_id),
-        )
-        db.commit()
+        # Tenta algumas vezes: se duas pessoas se inscreverem no mesmíssimo
+        # instante, as duas podem calcular o mesmo "próximo número
+        # disponível" antes de qualquer uma delas salvar. A trava UNIQUE no
+        # banco rejeita a segunda tentativa, e o loop recalcula e tenta de
+        # novo com o número seguinte.
+        for tentativa in range(5):
+            numero_inscricao = proximo_numero_inscricao(db)
+            try:
+                db.execute(
+                    "INSERT INTO participantes (nome, tipo, email, formacao, instituicao, cpf, curso, periodo, rgm, token, numero_inscricao, criado_em) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (nome, tipo, email, formacao, instituicao, cpf, curso, periodo, rgm, token, numero_inscricao, datetime.now().isoformat(timespec="seconds")),
+                )
+                db.commit()
+                break
+            except sqlite3.IntegrityError:
+                db.rollback()
+                if tentativa == 4:
+                    flash("Não foi possível concluir a inscrição, tente novamente.", "erro")
+                    return redirect(url_for("inscricao"))
+                continue
         gerar_qrcode(token)
         return redirect(url_for("confirmacao", token=token))
 
@@ -738,6 +900,38 @@ def api_busca():
     return jsonify([dict(r) for r in rows])
 
 
+@app.route("/api/stats")
+@login_required
+def api_stats():
+    """Números rápidos para a barra de estatísticas do scanner: total de
+    inscritos, total de check-ins já feitos (histórico) e % de presença
+    (quantos inscritos estão fisicamente dentro de algum local agora)."""
+    db = get_db()
+    total_inscritos = db.execute("SELECT COUNT(*) AS n FROM participantes").fetchone()["n"]
+    total_checkins = db.execute(
+        "SELECT COUNT(*) AS n FROM eventos_acesso WHERE tipo = 'entrada'"
+    ).fetchone()["n"]
+
+    participantes = db.execute("SELECT id FROM participantes").fetchall()
+    dentro_agora = 0
+    for p in participantes:
+        eventos = db.execute(
+            "SELECT tipo, horario, local FROM eventos_acesso WHERE participante_id = ? ORDER BY horario ASC",
+            (p["id"],),
+        ).fetchall()
+        visitas = montar_visitas(eventos)
+        if any(v["em_andamento"] for v in visitas):
+            dentro_agora += 1
+
+    presenca_pct = round((dentro_agora / total_inscritos) * 100) if total_inscritos else 0
+
+    return jsonify({
+        "inscritos": total_inscritos,
+        "checkins": total_checkins,
+        "presenca_pct": presenca_pct,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Exportação
 # ---------------------------------------------------------------------------
@@ -790,7 +984,7 @@ def exportar():
     writer.writerow(
         [
             "Nº Inscrição", "Nome", "Tipo (aluno/participante)", "E-mail", "CPF",
-            "Formação", "Instituição", "Inscrito em",
+            "Curso", "Período", "RGM", "Formação (externo)", "Instituição", "Inscrito em",
             "Local", "Data/Hora Entrada", "Data/Hora Saída", "Tempo de Estadia",
         ]
     )
@@ -803,7 +997,7 @@ def exportar():
         ).fetchall()
         base = [
             p["numero_inscricao"], p["nome"], p["tipo"], p["email"], p["cpf"],
-            p["formacao"], p["instituicao"], p["criado_em"],
+            p["curso"], p["periodo"], p["rgm"], p["formacao"], p["instituicao"], p["criado_em"],
         ]
 
         visitas = montar_visitas(eventos)

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}UniTalks 2026{% endblock %}
+{% block title %}Início{% endblock %}
 {% block content %}
 <div class="hero">
-  <img src="{{ url_for('static', filename='img/logo.png') }}" alt="UniTalks" class="hero-logo">
+  <img src="{{ static_v('img/logo.png') }}" alt="UniTalks" class="hero-logo" width="560" height="560">
 
   <div class="hero-info">
-    <p class="hero-tagline">Um Negócio por Trás dos Negócios</p>
+    <h1 class="hero-tagline">Um Negócio por Trás dos Negócios</h1>
     <p class="hero-local">📍 Avenida Diógenes Chianca, João Pessoa, Paraíba</p>
     <div class="hero-datas">
       <span class="data-pill">📅 16/09/2026</span>
@@ -21,15 +21,17 @@
       Fazer Inscrição ↗
     </a>
 
-    <div class="selo-instituicao">
-      <img src="{{ url_for('static', filename='img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="selo-instituicao-logo">
-      <span>Evento licenciado pelo Centro Universitário UNIPÊ</span>
+    <div class="selo-instituicao-wrap">
+      <div class="selo-instituicao">
+        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="selo-instituicao-logo" width="160" height="160">
+        <span>Evento licenciado pelo Centro Universitário UNIPÊ</span>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="card apresentacao-card">
-  <h1>Apresentação do evento</h1>
+  <h2>Apresentação do evento</h2>
   <p>
     UniTalks 2026 é um evento acadêmico promovido pelos alunos do curso de negócios do Centro
     Universitário UNIPÊ, com o objetivo de conectar estudantes, profissionais e empreendedores por meio de
@@ -39,22 +41,30 @@
 </div>
 
 <div class="card mapa-card" id="mapa">
-  <h1 style="margin-top:0;">🗺️ Mapa do evento</h1>
+  <h2 style="margin-top:0;">🗺️ Mapa do evento</h2>
   <p class="mapa-descricao">
     Veja por onde entrar e o caminho até cada dia de credenciamento dentro do campus.
   </p>
   <div class="mapa-imagem-wrap">
-    <img src="{{ url_for('static', filename='img/mapa_evento.jpg') }}" alt="Mapa do campus com o trajeto até o evento" class="mapa-imagem">
+    <img src="{{ static_v('img/mapa_evento.jpg') }}" alt="Mapa do campus com o trajeto até o evento" class="mapa-imagem" width="1200" height="896" loading="lazy">
   </div>
   <div class="mapa-legenda">
     <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#1c7a4d;"></span> 1º Dia — Auditório</span>
     <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#0b2f66;"></span> 2º Dia — EVA</span>
     <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#8b1e2b;"></span> Trajeto sugerido</span>
   </div>
+  <div class="mapa-links-locais">
+    <a href="https://maps.app.goo.gl/rV15dBYjzKWgWJXr5" target="_blank" rel="noopener" class="mapa-link-local">
+      🏛️ Como chegar no Auditório
+    </a>
+    <a href="https://maps.app.goo.gl/4oaZouwzKUFBLG6m8" target="_blank" rel="noopener" class="mapa-link-local">
+      🏢 Como chegar no EVA
+    </a>
+  </div>
 </div>
 
 <div class="cronograma-card" id="cronograma">
-  <h1 class="cronograma-titulo">📅 Cronograma</h1>
+  <h2 class="cronograma-titulo">📅 Cronograma</h2>
 
   <div class="dia-evento">
     <div class="dia-pill">DIA 1: INSPIRAÇÃO, CASES E TENDÊNCIAS</div>

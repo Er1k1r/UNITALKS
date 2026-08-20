@@ -57,7 +57,7 @@
         <th>Tipo</th>
         <th>E-mail</th>
         <th>CPF</th>
-        <th>Formação</th>
+        <th>Curso / RGM</th>
         <th>Instituição</th>
         <th>Inscrito em</th>
         <th>Onde está agora</th>
@@ -69,12 +69,20 @@
       {% for item in lista %}
         {% set p = item.p %}
         <tr>
-          <td>{{ p['numero_inscricao'] or '-' }}</td>
+          <td style="font-family: var(--fonte-mono); font-weight: 700;">{{ p['numero_inscricao'] or '-' }}</td>
           <td>{{ p['nome'] }}</td>
           <td>{{ 'Aluno(a)' if p['tipo'] == 'aluno' else ('Participante' if p['tipo'] == 'participante' else '-') }}</td>
           <td>{{ p['email'] or '-' }}</td>
           <td>{{ p['cpf'] or '-' }}</td>
-          <td>{{ p['formacao'] or '-' }}</td>
+          <td>
+            {% if p['tipo'] == 'aluno' %}
+              {{ p['curso'] or '-' }}
+              {% if p['periodo'] %}<br><span style="color:var(--muted); font-size:0.78rem;">{{ p['periodo'] }}</span>{% endif %}
+              {% if p['rgm'] %}<br><span style="color:var(--muted); font-size:0.78rem; font-family:var(--fonte-mono);">RGM {{ p['rgm'] }}</span>{% endif %}
+            {% else %}
+              {{ p['formacao'] or '-' }}
+            {% endif %}
+          </td>
           <td>{{ p['instituicao'] or '-' }}</td>
           <td>{{ p['criado_em'].replace('T', ' ') if p['criado_em'] else '-' }}</td>
           <td>
