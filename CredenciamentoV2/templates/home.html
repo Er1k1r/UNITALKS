@@ -2,10 +2,12 @@
 {% block title %}Início{% endblock %}
 {% block content %}
 <div class="hero">
-  <img src="{{ static_v('img/logo.png') }}" alt="UniTalks" class="hero-logo" width="560" height="560">
+  <div class="hero-logo-frame">
+    <img src="{{ static_v('img/logo.png') }}" alt="UniTalks" class="hero-logo" width="1000" height="304">
+  </div>
 
   <div class="hero-info">
-    <h1 class="hero-tagline">Um Negócio por Trás dos Negócios</h1>
+    <h1 class="hero-tagline">Conectando IA, Gestão e Inovação</h1>
     <p class="hero-local">📍 Avenida Diógenes Chianca, João Pessoa, Paraíba</p>
     <div class="hero-datas">
       <span class="data-pill">📅 16/09/2026</span>
@@ -40,6 +42,14 @@
   </p>
 </div>
 
+<div class="card solidario-card">
+  <h2>🍚 Ingresso Solidário <span class="solidario-tag">somente para externos</span></h2>
+  <p>
+    <strong>1kg de alimento não perecível</strong> (arroz, feijão ou macarrão) — sua participação
+    gera impacto real. Entregue na recepção no dia do evento.
+  </p>
+</div>
+
 <div class="card mapa-card" id="mapa">
   <h2 style="margin-top:0;">🗺️ Mapa do evento</h2>
   <p class="mapa-descricao">
@@ -67,7 +77,7 @@
   <h2 class="cronograma-titulo">📅 Cronograma</h2>
 
   <div class="dia-evento">
-    <div class="dia-pill">DIA 1: INSPIRAÇÃO, CASES E TENDÊNCIAS</div>
+    <div class="dia-pill">DIA 1: INSPIRAÇÃO E TENDÊNCIAS</div>
     <p class="dia-meta">Local: Auditório Principal da Unipê &nbsp;|&nbsp; Data: 16 de Setembro de 2026</p>
 
     <div class="agenda-item">
@@ -92,27 +102,20 @@
       </div>
     </div>
     <div class="agenda-item">
-      <div class="agenda-hora">19h20 – 19h55</div>
+      <div class="agenda-hora">19h20 – 20h15</div>
       <div class="agenda-texto">
-        <strong>Palestra 1: O Cenário Contábil</strong>
-        <p><strong>Convidada:</strong> Representante do CRC-PE (Conselho Regional de Contabilidade de Pernambuco).<br>
-        <strong>Tema:</strong> A definir.</p>
+        <strong>Painel de Discussão: Apresentação do Tema</strong>
+        <p><strong>Formato:</strong> Cada convidado terá um tempo de fala inicial para apresentar sua visão sobre o tema geral "Conectando IA, Gestão e Inovação".<br>
+        <strong>Convidados:</strong> Renato Rodrigues (Fundador e CEO da Softcom Tecnologia), Eliedna Barbosa (Presidente do CRC-PB), Marcos Kalebbe (Presidente do CRA-PB), Cristiana Fortini (TCE-PB).</p>
       </div>
     </div>
     <div class="agenda-item">
-      <div class="agenda-hora">19h55 – 20h30</div>
+      <div class="agenda-hora">20h15 – 20h55</div>
       <div class="agenda-texto">
-        <strong>Palestra 2: Case de Sucesso</strong>
-        <p><strong>Convidado:</strong> Renato (Softcom).<br>
-        <strong>Tema:</strong> Trajetória Empreendedora e Case de Sucesso da Softcom.</p>
-      </div>
-    </div>
-    <div class="agenda-item">
-      <div class="agenda-hora">20h30 – 20h55</div>
-      <div class="agenda-texto">
-        <strong>Debate: O Futuro dos Negócios</strong>
-        <p><strong>Participantes:</strong> Mesa de Convidados (com os palestrantes).<br>
-        <strong>Tema Central:</strong> As influências e os impactos da Inteligência Artificial (IA) nas diferentes áreas de negócios.</p>
+        <strong>Debate Executivo e Q&amp;A</strong>
+        <p><strong>Mediador:</strong> Paulo César (Coordenador da Unipê).<br>
+        <strong>Participantes:</strong> Mesa de Convidados.<br>
+        <strong>Dinâmica:</strong> Discussão entre os convidados e o mediador com perguntas previamente selecionadas sobre o tema.</p>
       </div>
     </div>
     <div class="agenda-item">
@@ -125,43 +128,43 @@
   </div>
 
   <div class="dia-evento">
-    <div class="dia-pill">DIA 2: IMERSÃO E OFICINAS PRÁTICAS (SIMULTÂNEAS)</div>
-    <p class="dia-meta">Local: Complexo EVA (Auditório e Salas de Aula) &nbsp;|&nbsp; Data: 17 de Setembro de 2026</p>
+    <div class="dia-pill">DIA 2: IMERSÃO E WORKSHOPS PRÁTICOS (SIMULTÂNEOS)</div>
+    <p class="dia-meta">Local: Complexo EVA &nbsp;|&nbsp; Data: 17 de Setembro de 2026</p>
     <p class="dia-obs">
-      Neste dia, o público poderá escolher uma das três trilhas de conhecimento
+      Neste dia, o público poderá escolher uma das quatro trilhas de conhecimento
       que ocorrerão simultaneamente das 19h às 21h.
     </p>
 
     <div class="oficina-item">
-      <strong>Oficina 1: Administração &amp; Tecnologia</strong>
-      <p><strong>Local:</strong> Auditório do EVA<br>
+      <strong>Workshop 1: Administração &amp; Tecnologia</strong>
+      <p><strong>Local:</strong> A definir<br>
       <strong>Convidada:</strong> Ana Rodrigues – CFO Vsoft Tecnologia.<br>
       <strong>Foco:</strong> Finanças, Gestão Estratégica e Tecnologia.<br>
       <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
     </div>
 
     <div class="oficina-item">
-      <strong>Oficina 2: Ciências Contábeis</strong>
-      <p><strong>Local:</strong> Sala de Aula (EVA) – a definir<br>
+      <strong>Workshop 2: Ciências Contábeis</strong>
+      <p><strong>Local:</strong> A definir<br>
       <strong>Convidado:</strong> Onezildo Martins – Onezildo Martins Escritório de Contabilidade.<br>
       <strong>Foco:</strong> Atuação Paralegal e os novos desafios da contabilidade.<br>
       <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
     </div>
 
     <div class="oficina-item">
-      <strong>Oficina 3: Marketing &amp; Estratégia</strong>
-      <p><strong>Local:</strong> Sala de Aula (EVA) – a definir<br>
-      <strong>Convidado:</strong> Davyd Matias – Ex-professor e atual Presidente da Câmara Municipal de Vereadores.<br>
-      <strong>Tema Central:</strong> "Da Sala de Aula à Vida Pública: Branding, Networking e Liderança na Construção de uma Carreira de Sucesso".</p>
-      <p><strong>Foco (Marketing Pessoal e Estratégico):</strong></p>
-      <ul>
-        <li>Práticas de mercado: como transformar conhecimento e experiência em oportunidades.</li>
-        <li>Branding pessoal: construção de uma imagem, reputação e credibilidade.</li>
-        <li>Networking: a importância de criar e manter boas conexões ao longo da carreira.</li>
-        <li>Vida pública e Liderança: como habilidades de comunicação e relacionamento se aplicam na atuação política e além.</li>
-        <li>Trajetória profissional: insights sobre como a experiência educacional abre portas para novos caminhos.</li>
-      </ul>
-      <p><strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+      <strong>Workshop 3: Contabilidade Pública</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidado:</strong> Elinaldo.<br>
+      <strong>Foco:</strong> Contabilidade Pública na Era da IA.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Workshop 4: O profissional de Marketing digital mais procurado</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidado:</strong> Geo Sobreira.<br>
+      <strong>Foco:</strong> Desenvolva comunicação, criatividade e inteligência emocional para potencializar sua construção de marca pessoal. Una essas habilidades à visão empresarial, estratégia, negociação e vendas para resolver problemas reais de mercado.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
     </div>
   </div>
 

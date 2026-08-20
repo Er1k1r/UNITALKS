@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="UniTalks 2026 — Um negócio por trás dos negócios. Evento acadêmico do curso de negócios do Centro Universitário UNIPÊ, com palestras, networking e experiências sobre empreendedorismo e mercado de trabalho. Inscrição gratuita.">
+  <meta name="description" content="UniTalks 2026 — Conectando IA, Gestão e Inovação. Evento acadêmico do curso de negócios do Centro Universitário UNIPÊ, com palestras, networking e experiências sobre empreendedorismo e mercado de trabalho. Inscrição gratuita.">
   <title>{% block title %}Gestão do Evento{% endblock %} · UniTalks 2026</title>
   <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
 
@@ -35,7 +35,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-marca">
-        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe" width="160" height="160">
+        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe" width="160" height="160" id="logo-unipe-toque">
         <a href="{{ url_for('home') }}" class="brand">
           <img src="{{ static_v('img/icone_unitalks.png') }}" alt="" class="brand-icone" width="129" height="160">
           UniTalks
@@ -116,6 +116,27 @@
         if (buffer === alvo) {
           mostrarBob();
           buffer = "";
+        }
+      });
+    })();
+
+    // Gatilho pro celular: sem teclado físico, "digitar bob" não rola.
+    // Em vez disso, 5 toques rápidos na estrelinha da UNIPÊ no topo
+    // revelam o mesmo easter egg.
+    (function () {
+      const alvo = document.getElementById("logo-unipe-toque");
+      if (!alvo) return;
+      let toques = 0;
+      let ultimoToque = 0;
+
+      alvo.addEventListener("click", () => {
+        const agora = Date.now();
+        if (agora - ultimoToque > 1500) toques = 0;
+        ultimoToque = agora;
+        toques++;
+        if (toques >= 5) {
+          toques = 0;
+          mostrarBob();
         }
       });
     })();

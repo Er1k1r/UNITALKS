@@ -24,6 +24,9 @@
     <p id="aviso-email-institucional" class="aviso-campo" style="display:none;">
       ⚠️ Por favor, use seu <strong>e-mail institucional</strong> (o mesmo cadastrado na faculdade).
     </p>
+    <p id="aviso-ingresso-solidario" class="aviso-campo aviso-solidario" style="display:none;">
+      🍚 A sua entrada é apenas <strong>1kg de alimento não perecível</strong> (arroz, feijão ou macarrão).
+    </p>
 
     <div id="grupo-aluno" style="display:none;">
       <label for="curso">Curso</label>
@@ -64,6 +67,7 @@ inputCpf.addEventListener("input", () => {
 <script>
 const radiosTipo = document.querySelectorAll('input[name="tipo"]');
 const avisoEmail = document.getElementById("aviso-email-institucional");
+const avisoSolidario = document.getElementById("aviso-ingresso-solidario");
 const labelInstituicao = document.getElementById("label-instituicao");
 const inputInstituicao = document.getElementById("instituicao");
 const grupoAluno = document.getElementById("grupo-aluno");
@@ -79,6 +83,7 @@ function atualizarFormulario() {
   // (evita duplicidade de informação — o aluno já detalha o curso).
   grupoAluno.style.display = ehAluno ? "block" : "none";
   grupoFormacao.style.display = ehAluno ? "none" : "block";
+  avisoSolidario.style.display = ehAluno ? "none" : "block";
 
   if (ehAluno) {
     avisoEmail.style.display = "block";

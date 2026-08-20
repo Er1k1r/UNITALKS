@@ -394,7 +394,7 @@ def gerar_pdf_credencial(participante) -> bytes:
 
     c.setFont("Helvetica", 9.5)
     c.setFillColorRGB(0.89, 0.867, 0.937)  # tom claro seguro (mesmo do site)
-    c.drawCentredString(largura / 2, altura - 26 * mm, "Um negócio por trás dos negócios")
+    c.drawCentredString(largura / 2, altura - 26 * mm, "Conectando IA, Gestão e Inovação")
     c.setFont("Helvetica", 7.5)
     c.setFillColorRGB(0.8, 0.77, 0.85)
     c.drawCentredString(largura / 2, altura - 31 * mm, "Evento licenciado pelo Centro Universitário UNIPÊ")

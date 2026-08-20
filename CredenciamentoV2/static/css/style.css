@@ -80,6 +80,7 @@ body {
 .topbar-logo-unipe {
   height: 42px;
   width: auto;
+  cursor: pointer;
 }
 
 /* --- Atalhos rápidos (Mapa / Cronograma) ---
@@ -642,7 +643,7 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 .hero {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
@@ -677,11 +678,32 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 .hero::before { left: -15px; }
 .hero::after { right: -15px; }
 
+/* Moldura ao redor do logo: mesma cor de fundo da própria arte (navy),
+   esticada pra altura toda do hero — a "sobra" vira moldura de propósito
+   em vez de espaço vazio. Borda fina em degradê ecoa a assinatura de
+   ingresso usada no resto do site. */
+.hero-logo-frame {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 330px;
+  max-width: 100%;
+  padding: 18px;
+  background: #24265d;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(#24265d, #24265d),
+    linear-gradient(135deg, var(--orange), var(--magenta));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,0.5);
+}
 .hero-logo {
-  max-width: 260px;
+  max-width: 100%;
   width: 100%;
   height: auto;
-  flex-shrink: 0;
 }
 
 .hero-info {
@@ -823,6 +845,38 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 .apresentacao-card p {
   color: var(--text);
   line-height: 1.65;
+  margin: 0;
+}
+
+/* --- Ingresso Solidário --- */
+.solidario-card {
+  border-left: 4px solid var(--green);
+  background: #eef9f2;
+}
+.solidario-card h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--navy);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.solidario-tag {
+  font-family: var(--fonte-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--green);
+  color: white;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+.solidario-card p {
+  color: var(--text);
+  line-height: 1.6;
   margin: 0;
 }
 
@@ -1028,6 +1082,11 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   padding: 8px 12px;
   font-size: 0.82rem;
   margin: 8px 0 0;
+}
+.aviso-solidario {
+  background: #eef9f2;
+  color: #1a6b45;
+  border-color: #b9e6cb;
 }
 
 /* --- Cronograma (identidade visual oficial: fundo escuro, faixas em gradiente) --- */
