@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block title %}Credenciamento{% endblock %}
+{% block content %}
+<div class="card app-scanner" id="app-scanner-card">
+
+  <div id="overlay-processando" class="overlay-processando">
+    <div class="spinner-moderno"></div>
+    <div class="spinner-texto">
+      Registrando<span class="ponto"></span><span class="ponto"></span><span class="ponto"></span>
+    </div>
+  </div>
+
+  <h1 style="margin-top:0;">📷 Credenciamento</h1>
+  <p style="color:var(--muted); margin-top:-8px;">
+    Toque em "Ler QR Code" para ativar a câmera. A entrada é registrada
+    automaticamente com a hora exata; uma nova leitura da mesma pessoa
+    registra a saída.
+  </p>
+
+  <div class="local-selecao">
+    <label for="local-leitura" style="margin-top:0;">📍 Onde você está lendo agora? *</label>
+    <select id="local-leitura">
+      <option value="" disabled>Selecione o local...</option>
+      {% for chave, info in locais.items() %}
+        <option value="{{ chave }}">Dia {{ info.dia }} — {{ info.label }}</option>
+      {% endfor %}
+    </select>
+    <div id="local-atual-badge" class="local-badge local-badge-vazio">
+      ⚠️ Nenhum local selecionado — selecione antes de registrar leituras
+    </div>
+  </div>
+
+  <!-- Moldura de mira: decorativa até a câmera ligar, depois cede lugar à
+       imagem real da câmera (mesma área, mesmo tamanho) -->
+  <div class="mira-wrap" id="mira-wrap">
+    <div class="mira" id="mira-decorativa">
+      <div class="mira-canto tl"></div><div class="mira-canto tr"></div>
+      <div class="mira-canto bl"></div><div class="mira-canto br"></div>
+      <div class="mira-linha" aria-hidden="true"></div>
+      <svg class="mira-pontos" viewBox="0 0 100 100" aria-hidden="true"><g id="pontos-sol"></g></svg>
+    </div>
+    <div id="leitor" style="display:none;"></div>
+  </div>
+
+  <button id="btn-ativar-camera" class="btn navy" style="width:100%; font-size:1.05rem;">
+    📷 Ler QR Code
+  </button>
+  <button id="btn-parar-camera" class="btn" style="display:none; width:100%; background:#8a8f98;">
+    Parar câmera
+  </button>
+
+  <div id="resultado-vazio-msg" class="resultado-vazio">
+    Aguardando leitura...
+  </div>
+  <div id="resultado-card" class="resultado-card" style="display:none;">
+    <div class="avatar-ring" id="resultado-avatar">--</div>
+    <div class="resultado-info">
+      <h3 id="resultado-nome">—</h3>
+      <div class="resultado-sub" id="resultado-sub">—</div>
+    </div>
+    <div class="resultado-status">
+      <span class="ok-tag" id="resultado-tag">—</span>
+    </div>
+  </div>
+  <div id="aviso-extra"></div>
+
+  <!-- Estatísticas ao vivo do evento, atualizadas a cada leitura -->
+  <div class="stats-bar">
+    <div class="stat"><div class="n" id="stat-checkins">—</div><div class="l">Check-ins</div></div>
+    <div class="stat"><div class="n" id="stat-inscritos">—</div><div class="l">Inscritos</div></div>
+    <div class="stat"><div class="n" id="stat-presenca">—</div><div class="l">Presença</div></div>
+  </div>
+
+  <hr style="border:none; border-top:1px solid var(--border); margin:28px 0;">
+
+  <h2 style="margin-top:0;">Sem QR Code? Use o número de inscrição</h2>
+  <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">
+    Se a leitura do QR Code falhar, digite o número de inscrição da pessoa
+    (ex.: 202601) e toque em Registrar.
+  </p>
+  <div class="busca-manual">
+    <input type="text" id="numero-inscricao" inputmode="numeric" placeholder="Número de inscrição (ex: 202601)">
+    <button id="btn-registrar-numero" class="btn orange" style="width:100%;">Registrar</button>
+  </div>
+
+  <details style="margin-top:20px;">
+    <summary style="cursor:pointer; color:var(--navy); font-weight:600;">
+      Ou buscar por nome/CPF
+    </summary>
+    <div class="busca-manual" style="margin-top:12px;">
+      <input type="text" id="busca" placeholder="Digite nome, CPF ou e-mail...">
+      <div id="busca-resultados"></div>
+    </div>
+  </details>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// --- Padrão de pontinhos (sun-dots) dentro da mira decorativa ---
+(function () {
+  const g = document.getElementById("pontos-sol");
+  const n = 7, sp = 100 / (n + 1), r = sp * 0.26;
+  for (let y = 1; y <= n; y++) for (let x = 1; x <= n; x++) {
+    const cx = x * sp, cy = y * sp, dx = cx - 50, dy = cy - 50;
+    if (Math.sqrt(dx * dx + dy * dy) < 42) {
+      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+      c.style.animationDelay = (Math.random() * 2.6) + "s";
+      g.appendChild(c);
+    }
+  }
+})();
+
+function iniciaisDoNome(nome) {
+  const partes = nome.trim().split(/\s+/);
+  const iniciais = (partes[0]?.[0] || "") + (partes.length > 1 ? partes[partes.length - 1][0] : "");
+  return iniciais.toUpperCase();
+}
+
+// --- Barra de estatísticas: carrega ao abrir e atualiza após cada leitura ---
+async function atualizarStats() {
+  try {
+    const resp = await fetch("{{ url_for('api_stats') }}");
+    const s = await resp.json();
+    document.getElementById("stat-checkins").textContent = s.checkins;
+    document.getElementById("stat-inscritos").textContent = s.inscritos;
+    document.getElementById("stat-presenca").textContent = s.presenca_pct + "%";
+  } catch (e) { /* silencioso — não atrapalha o fluxo de leitura */ }
+}
+atualizarStats();
+
+// --- Seleção do local (persiste no aparelho do recepcionista, via localStorage) ---
+const LABELS_LOCAL = {
+  {% for chave, info in locais.items() %}"{{ chave }}": "{{ info.label }}",{% endfor %}
+};
+const selectLocal = document.getElementById("local-leitura");
+const badgeLocal = document.getElementById("local-atual-badge");
+
+function atualizarBadgeLocal() {
+  const valor = selectLocal.value;
+  if (!valor) {
+    badgeLocal.className = "local-badge local-badge-vazio";
+    badgeLocal.textContent = "⚠️ Nenhum local selecionado — selecione antes de registrar leituras";
+  } else {
+    badgeLocal.className = "local-badge local-badge-ativo";
+    badgeLocal.textContent = "📍 Lendo QR Codes em: " + LABELS_LOCAL[valor];
+  }
+}
+
+const localSalvo = localStorage.getItem("unitalks_local_leitura");
+if (localSalvo && LABELS_LOCAL[localSalvo]) {
+  selectLocal.value = localSalvo;
+}
+atualizarBadgeLocal();
+
+selectLocal.addEventListener("change", () => {
+  localStorage.setItem("unitalks_local_leitura", selectLocal.value);
+  atualizarBadgeLocal();
+});
+
+function bip(sucesso) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = sucesso ? 880 : 220;
+    gain.gain.value = 0.15;
+    osc.start();
+    setTimeout(() => { osc.stop(); ctx.close(); }, 150);
+  } catch (e) {}
+}
+
+function vibrar() {
+  if (navigator.vibrate) navigator.vibrate(120);
+}
+
+// --- Trava contra leitura/clique duplicado -------------------------------
+const COOLDOWN_MS = 500;
+let isProcessing = false;
+
+const overlayProcessando = document.getElementById("overlay-processando");
+const btnRegistrarNumero = document.getElementById("btn-registrar-numero");
+const inputNumeroInscricao = document.getElementById("numero-inscricao");
+const inputBuscaEl = document.getElementById("busca");
+const divBuscaResultados = document.getElementById("busca-resultados");
+const resultadoVazioMsg = document.getElementById("resultado-vazio-msg");
+const resultadoCard = document.getElementById("resultado-card");
+
+function definirTravado(travado) {
+  isProcessing = travado;
+  overlayProcessando.classList.toggle("ativo", travado);
+
+  btnRegistrarNumero.disabled = travado;
+  inputNumeroInscricao.disabled = travado;
+  inputBuscaEl.disabled = travado;
+  divBuscaResultados.classList.toggle("busca-desabilitada", travado);
+}
+
+function mostrarResultadoVazio(texto) {
+  resultadoCard.style.display = "none";
+  resultadoVazioMsg.style.display = "block";
+  resultadoVazioMsg.className = "resultado-vazio";
+  resultadoVazioMsg.textContent = texto;
+}
+
+function mostrarResultadoErro(texto) {
+  resultadoCard.style.display = "none";
+  resultadoVazioMsg.style.display = "block";
+  resultadoVazioMsg.className = "resultado-scan erro";
+  resultadoVazioMsg.textContent = "❌ " + texto;
+}
+
+function mostrarResultadoSucesso(data) {
+  resultadoVazioMsg.style.display = "none";
+  resultadoCard.style.display = "flex";
+  resultadoCard.className = "resultado-card " + data.tipo;
+
+  document.getElementById("resultado-avatar").textContent = iniciaisDoNome(data.nome);
+  document.getElementById("resultado-nome").textContent = data.nome;
+  document.getElementById("resultado-sub").textContent = data.local_label + " · " + data.horario.split("T")[1];
+
+  const tag = document.getElementById("resultado-tag");
+  if (data.tipo === "entrada") {
+    tag.textContent = "✓ Check-in feito";
+    tag.className = "ok-tag ok-tag-entrada";
+  } else {
+    tag.textContent = "↩ Check-out feito";
+    tag.className = "ok-tag ok-tag-saida";
+  }
+}
+
+async function registrarCheckin(payload) {
+  if (isProcessing) return; // ignora cliques/leituras enquanto já processa
+  const inicio = Date.now();
+  definirTravado(true);
+
+  const divAviso = document.getElementById("aviso-extra");
+  divAviso.innerHTML = "";
+
+  const destravarComCooldown = () => {
+    const decorrido = Date.now() - inicio;
+    const restante = Math.max(0, COOLDOWN_MS - decorrido);
+    setTimeout(() => definirTravado(false), restante);
+  };
+
+  if (!selectLocal.value) {
+    mostrarResultadoErro("Selecione o local (Auditório ou Sala) antes de registrar.");
+    bip(false);
+    destravarComCooldown();
+    return;
+  }
+  payload.local = selectLocal.value;
+
+  mostrarResultadoVazio("Verificando...");
+
+  let data;
+  try {
+    const resp = await fetch("{{ url_for('api_checkin') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    data = await resp.json();
+  } catch (e) {
+    mostrarResultadoErro("Falha de conexão com o servidor.");
+    bip(false);
+    destravarComCooldown();
+    return;
+  }
+
+  if (!data.ok) {
+    mostrarResultadoErro(data.mensagem);
+    bip(false);
+    vibrar();
+    destravarComCooldown();
+    return;
+  }
+
+  mostrarResultadoSucesso(data);
+  if (data.aviso) {
+    divAviso.innerHTML = `<div class="aviso-campo" style="margin-top:12px;">${data.aviso}</div>`;
+  }
+  bip(true);
+  vibrar();
+  destravarComCooldown();
+  atualizarStats();
+
+  clearTimeout(window._limparResultado);
+  window._limparResultado = setTimeout(() => {
+    mostrarResultadoVazio("Aguardando leitura...");
+  }, 4000);
+}
+
+// --- Check-in por número de inscrição ---
+document.getElementById("btn-registrar-numero").addEventListener("click", () => {
+  if (isProcessing) return;
+  const numero = document.getElementById("numero-inscricao").value.trim();
+  if (!numero) return;
+  registrarCheckin({ numero_inscricao: numero });
+  document.getElementById("numero-inscricao").value = "";
+});
+
+document.getElementById("numero-inscricao").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-registrar-numero").click();
+});
+
+// --- Busca manual por nome/CPF ---
+const inputBusca = document.getElementById("busca");
+const divResultados = document.getElementById("busca-resultados");
+
+inputBusca.addEventListener("input", async () => {
+  const termo = inputBusca.value.trim();
+  if (termo.length < 2) { divResultados.innerHTML = ""; return; }
+
+  const resp = await fetch(`/api/busca?q=${encodeURIComponent(termo)}`);
+  const pessoas = await resp.json();
+
+  divResultados.innerHTML = pessoas.map(p => `
+    <div class="resultado-item">
+      <span>${p.nome} ${p.cpf ? "— " + p.cpf : ""}</span>
+      <button onclick='registrarCheckin({token: "${p.token}"})'>Registrar</button>
+    </div>
+  `).join("") || "<p style='color:var(--muted); font-size:0.85rem;'>Nenhum resultado.</p>";
+});
+
+// --- Câmera: isolada do resto — se a biblioteca de QR Code não carregar
+// (CDN fora do ar, rede bloqueando, ad-blocker), o check-in manual acima
+// continua funcionando normalmente. A câmera é só mais um jeito de
+// registrar, nunca pode travar o resto da página. ---
+try {
+  if (typeof Html5Qrcode === "undefined") {
+    throw new Error("Biblioteca do QR Code não carregou.");
+  }
+
+  const html5QrCode = new Html5Qrcode("leitor");
+  let cameraAtiva = false;
+  let ultimaLeitura = 0;
+  let ultimoToken = "";
+
+  function aoLer(decodedText) {
+    if (isProcessing) return; // câmera continua "vendo" o QR — ignora nesse intervalo
+    const agora = Date.now();
+    if (decodedText === ultimoToken && agora - ultimaLeitura < 5000) return;
+    ultimaLeitura = agora;
+    ultimoToken = decodedText;
+    registrarCheckin({ token: decodedText });
+  }
+
+  document.getElementById("btn-ativar-camera").addEventListener("click", () => {
+    if (cameraAtiva) return;
+    document.getElementById("mira-decorativa").style.display = "none";
+    document.getElementById("leitor").style.display = "block";
+    document.getElementById("btn-ativar-camera").style.display = "none";
+    document.getElementById("btn-parar-camera").style.display = "block";
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 230, height: 230 } },
+      aoLer
+    ).then(() => {
+      cameraAtiva = true;
+    }).catch(() => {
+      document.getElementById("mira-decorativa").style.display = "flex";
+      document.getElementById("leitor").style.display = "none";
+      document.getElementById("leitor").innerHTML =
+        "<p style='color:var(--muted); text-align:center;'>Câmera não disponível. Use o número de inscrição abaixo.</p>";
+      document.getElementById("btn-ativar-camera").style.display = "block";
+      document.getElementById("btn-parar-camera").style.display = "none";
+    });
+  });
+
+  document.getElementById("btn-parar-camera").addEventListener("click", () => {
+    if (!cameraAtiva) return;
+    html5QrCode.stop().then(() => {
+      cameraAtiva = false;
+      document.getElementById("leitor").style.display = "none";
+      document.getElementById("leitor").innerHTML = "";
+      document.getElementById("mira-decorativa").style.display = "flex";
+      document.getElementById("btn-ativar-camera").style.display = "block";
+      document.getElementById("btn-parar-camera").style.display = "none";
+    });
+  });
+} catch (erroLib) {
+  console.warn("Leitura por câmera indisponível, use o número de inscrição:", erroLib);
+  const btnCam = document.getElementById("btn-ativar-camera");
+  btnCam.textContent = "📷 Leitor de QR indisponível — use o número abaixo";
+  btnCam.disabled = true;
+  btnCam.style.opacity = "0.6";
+  btnCam.style.cursor = "not-allowed";
+}
+</script>
+{% endblock %}

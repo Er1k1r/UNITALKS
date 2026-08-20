@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Inscrição confirmada{% endblock %}
+{% block content %}
+<div class="ticket-confirmacao">
+  <div class="ticket-confirmacao-topo">
+    <span class="ticket-check">✅</span>
+    <h1>Inscrição confirmada!</h1>
+    <p>Olá, <strong>{{ p['nome'] }}</strong> — esta é a sua credencial de acesso ao UniTalks 2026.</p>
+  </div>
+
+  <div class="ticket-confirmacao-corpo">
+    <div class="numero-inscricao">
+      Inscrição nº <strong>{{ p['numero_inscricao'] }}</strong>
+    </div>
+
+    <div class="qr-moldura">
+      <img src="{{ url_for('static', filename='qrcodes/' + p['token'] + '.png') }}"
+           alt="QR Code de credenciamento de {{ p['nome'] }}" width="200" height="200">
+    </div>
+
+    <p class="ticket-instrucao">
+      Apresente este QR Code na entrada e na saída de cada local do evento.
+      Se a leitura falhar, informe o número de inscrição acima.
+    </p>
+  </div>
+
+  <div class="ticket-confirmacao-perfuracao"></div>
+
+  <div class="ticket-confirmacao-rodape">
+    <a class="btn orange" href="{{ url_for('credencial_pdf', token=p['token']) }}" target="_blank">
+      📄 Baixar credencial em PDF
+    </a>
+  </div>
+</div>
+{% endblock %}

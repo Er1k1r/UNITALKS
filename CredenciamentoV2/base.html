@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="UniTalks 2026 — Conectando IA, Gestão e Inovação. Evento acadêmico do curso de negócios do Centro Universitário UNIPÊ, com palestras, networking e experiências sobre empreendedorismo e mercado de trabalho. Inscrição gratuita.">
+  <title>{% block title %}Gestão do Evento{% endblock %} · UniTalks 2026</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
+
+  <!-- Tipografia: preconnect + font-display=swap evitam texto invisível
+       durante o carregamento (o navegador mostra a fonte de sistema até a
+       fonte da web chegar, sem "flash em branco"). Só os pesos usados de
+       verdade no site são carregados, pra não pesar a página. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ static_v('css/style.css') }}">
+
+  <!-- PWA: permite "Adicionar à tela inicial" no celular da recepção -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#1a1035">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("{{ url_for('static', filename='js/sw.js') }}");
+      });
+    }
+  </script>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-marca">
+        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="topbar-logo-unipe" width="160" height="160" id="logo-unipe-toque">
+        <a href="{{ url_for('home') }}" class="brand">
+          <img src="{{ static_v('img/icone_unitalks.png') }}" alt="" class="brand-icone" width="129" height="160">
+          UniTalks
+        </a>
+      </div>
+      <nav>
+        <a href="{{ url_for('home') }}" class="nav-link">Início</a>
+        <a href="{{ url_for('inscricao') }}" class="nav-link">Inscrição</a>
+
+        {% if session.get('autenticado') %}
+          <span class="nav-divisor"></span>
+          <a href="{{ url_for('scanner') }}" class="nav-link nav-equipe-ativo">🔓 Check-in/out</a>
+          {% if session.get('nivel') == 'admin' %}
+            <a href="{{ url_for('painel') }}" class="nav-link nav-equipe-ativo">📊 Painel</a>
+          {% endif %}
+          <a href="{{ url_for('logout') }}" class="nav-link nav-sair">Sair</a>
+        {% else %}
+          <span class="nav-divisor"></span>
+          <a href="{{ url_for('login') }}" class="nav-link nav-equipe-login">🔒 Área da Equipe</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for categoria, msg in messages %}
+          <div class="alerta alerta-{{ categoria }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Atalhos rápidos: só faz sentido na Início, onde as seções existem.
+       Aproveita o espaço vazio da lateral em telas largas. -->
+  {% if request.endpoint == 'home' %}
+  <div class="atalhos-lateral">
+    <a href="{{ url_for('home') }}#mapa" class="atalho-lateral-item">
+      <span class="atalho-lateral-icone">🗺️</span>
+      <span class="atalho-lateral-texto">Mapa do<br>evento</span>
+    </a>
+    <a href="{{ url_for('home') }}#cronograma" class="atalho-lateral-item">
+      <span class="atalho-lateral-icone">📅</span>
+      <span class="atalho-lateral-texto">Cronograma</span>
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- 🐣 Easter egg: digite "bob" em qualquer lugar do site -->
+  <div id="bob-overlay" class="bob-overlay">
+    <div class="bob-caixa">
+      <div class="bob-emoji">🕵️‍♂️</div>
+      <div class="bob-titulo">Você encontrou o BOB!</div>
+      <div class="bob-texto">Ele estava só de passagem pelo UniTalks 2026 👀✨</div>
+      <button type="button" class="bob-fechar" onclick="fecharBob()">Fechar</button>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const alvo = "bob";
+      let buffer = "";
+      let ultimoTempo = 0;
+
+      window.addEventListener("keydown", (e) => {
+        // Ignora se a pessoa estiver digitando dentro de um campo de formulário
+        const tag = (e.target.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "textarea" || tag === "select") return;
+        if (e.key.length !== 1) return;
+
+        const agora = Date.now();
+        if (agora - ultimoTempo > 2000) buffer = "";
+        ultimoTempo = agora;
+
+        buffer = (buffer + e.key.toLowerCase()).slice(-alvo.length);
+        if (buffer === alvo) {
+          mostrarBob();
+          buffer = "";
+        }
+      });
+    })();
+
+    // Gatilho pro celular: sem teclado físico, "digitar bob" não rola.
+    // Em vez disso, 5 toques rápidos na estrelinha da UNIPÊ no topo
+    // revelam o mesmo easter egg.
+    (function () {
+      const alvo = document.getElementById("logo-unipe-toque");
+      if (!alvo) return;
+      let toques = 0;
+      let ultimoToque = 0;
+
+      alvo.addEventListener("click", () => {
+        const agora = Date.now();
+        if (agora - ultimoToque > 1500) toques = 0;
+        ultimoToque = agora;
+        toques++;
+        if (toques >= 5) {
+          toques = 0;
+          mostrarBob();
+        }
+      });
+    })();
+
+    function mostrarBob() {
+      const overlay = document.getElementById("bob-overlay");
+      overlay.classList.add("ativo");
+      gerarConfetesBob();
+      clearTimeout(window._bobTimeout);
+      window._bobTimeout = setTimeout(fecharBob, 5000);
+    }
+
+    function fecharBob() {
+      document.getElementById("bob-overlay").classList.remove("ativo");
+    }
+
+    function gerarConfetesBob() {
+      const overlay = document.getElementById("bob-overlay");
+      const cores = ["#f2a71b", "#d94f8c", "#8b5cf6", "#22c55e", "#38bdf8"];
+      for (let i = 0; i < 26; i++) {
+        const c = document.createElement("span");
+        c.className = "bob-confete";
+        c.style.left = Math.random() * 100 + "%";
+        c.style.background = cores[i % cores.length];
+        c.style.animationDelay = (Math.random() * 0.4) + "s";
+        c.style.animationDuration = (1.6 + Math.random() * 1.2) + "s";
+        overlay.appendChild(c);
+        setTimeout(() => c.remove(), 3200);
+      }
+    }
+  </script>
+</body>
+</html>

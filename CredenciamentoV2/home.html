@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<div class="hero">
+  <div class="hero-logo-frame">
+    <img src="{{ static_v('img/logo.png') }}" alt="UniTalks" class="hero-logo" width="1000" height="304">
+  </div>
+
+  <div class="hero-info">
+    <h1 class="hero-tagline">Conectando IA, Gestão e Inovação</h1>
+    <p class="hero-local">📍 Avenida Diógenes Chianca, João Pessoa, Paraíba</p>
+    <div class="hero-datas">
+      <span class="data-pill">📅 16/09/2026</span>
+      <span class="data-pill">📅 17/09/2026</span>
+      <a class="data-pill data-pill-mapa" href="https://maps.app.goo.gl/G4S6b5fQjuUWZs8x6" target="_blank" rel="noopener">
+        🗺️ Como chegar
+      </a>
+      <a class="data-pill data-pill-insta" href="https://www.instagram.com/unitalks_2026.2?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener">
+        📸 Instagram
+      </a>
+    </div>
+    <a class="btn btn-inscricao" href="{{ url_for('inscricao') }}">
+      Fazer Inscrição ↗
+    </a>
+
+    <div class="selo-instituicao-wrap">
+      <div class="selo-instituicao">
+        <img src="{{ static_v('img/logo_unipe_estrela.png') }}" alt="UNIPÊ" class="selo-instituicao-logo" width="160" height="160">
+        <span>Evento licenciado pelo Centro Universitário UNIPÊ</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card apresentacao-card">
+  <h2>Apresentação do evento</h2>
+  <p>
+    UniTalks 2026 é um evento acadêmico promovido pelos alunos do curso de negócios do Centro
+    Universitário UNIPÊ, com o objetivo de conectar estudantes, profissionais e empreendedores por meio de
+    palestras, experiências práticas, networking e troca de conhecimentos sobre empreendedorismo, inovação e
+    mercado de trabalho.
+  </p>
+</div>
+
+<div class="card solidario-card">
+  <h2>🍚 Ingresso Solidário <span class="solidario-tag">somente para externos</span></h2>
+  <p>
+    <strong>1kg de alimento não perecível</strong> (arroz, feijão ou macarrão) — sua participação
+    gera impacto real. Entregue na recepção no dia do evento.
+  </p>
+</div>
+
+<div class="card mapa-card" id="mapa">
+  <h2 style="margin-top:0;">🗺️ Mapa do evento</h2>
+  <p class="mapa-descricao">
+    Veja por onde entrar e o caminho até cada dia de credenciamento dentro do campus.
+  </p>
+  <div class="mapa-imagem-wrap">
+    <img src="{{ static_v('img/mapa_evento.jpg') }}" alt="Mapa do campus com o trajeto até o evento" class="mapa-imagem" width="1200" height="896" loading="lazy">
+  </div>
+  <div class="mapa-legenda">
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#1c7a4d;"></span> 1º Dia — Auditório</span>
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#0b2f66;"></span> 2º Dia — EVA</span>
+    <span class="mapa-legenda-item"><span class="mapa-cor" style="background:#8b1e2b;"></span> Trajeto sugerido</span>
+  </div>
+  <div class="mapa-links-locais">
+    <a href="https://maps.app.goo.gl/rV15dBYjzKWgWJXr5" target="_blank" rel="noopener" class="mapa-link-local">
+      🏛️ Como chegar no Auditório
+    </a>
+    <a href="https://maps.app.goo.gl/4oaZouwzKUFBLG6m8" target="_blank" rel="noopener" class="mapa-link-local">
+      🏢 Como chegar no EVA
+    </a>
+  </div>
+</div>
+
+<div class="cronograma-card" id="cronograma">
+  <h2 class="cronograma-titulo">📅 Cronograma</h2>
+
+  <div class="dia-evento">
+    <div class="dia-pill">DIA 1: INSPIRAÇÃO E TENDÊNCIAS</div>
+    <p class="dia-meta">Local: Auditório Principal da Unipê &nbsp;|&nbsp; Data: 16 de Setembro de 2026</p>
+
+    <div class="agenda-item">
+      <div class="agenda-hora">18h30 – 19h00</div>
+      <div class="agenda-texto">
+        <strong>Momento Cultural</strong>
+        <p>Apresentação especial do Coral da Unipê.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h00 – 19h10</div>
+      <div class="agenda-texto">
+        <strong>Abertura Oficial</strong>
+        <p>Boas-vindas, apresentação dos convidados especiais e composição da mesa diretiva.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h10 – 19h20</div>
+      <div class="agenda-texto">
+        <strong>Visão Geral do UniTalks</strong>
+        <p>Breve apresentação da programação completa, palestras e oficinas do evento.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">19h20 – 20h15</div>
+      <div class="agenda-texto">
+        <strong>Painel de Discussão: Apresentação do Tema</strong>
+        <p><strong>Formato:</strong> Cada convidado terá um tempo de fala inicial para apresentar sua visão sobre o tema geral "Conectando IA, Gestão e Inovação".<br>
+        <strong>Convidados:</strong> Renato Rodrigues (Fundador e CEO da Softcom Tecnologia), Eliedna Barbosa (Presidente do CRC-PB), Marcos Kalebbe (Presidente do CRA-PB), Cristiana Fortini (TCE-PB).</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">20h15 – 20h55</div>
+      <div class="agenda-texto">
+        <strong>Debate Executivo e Q&amp;A</strong>
+        <p><strong>Mediador:</strong> Paulo César (Coordenador da Unipê).<br>
+        <strong>Participantes:</strong> Mesa de Convidados.<br>
+        <strong>Dinâmica:</strong> Discussão entre os convidados e o mediador com perguntas previamente selecionadas sobre o tema.</p>
+      </div>
+    </div>
+    <div class="agenda-item">
+      <div class="agenda-hora">20h55 – 21h00</div>
+      <div class="agenda-texto">
+        <strong>Encerramento do 1º Dia</strong>
+        <p>Agradecimentos finais e chamada especial para as Oficinas Práticas do Dia 2.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dia-evento">
+    <div class="dia-pill">DIA 2: IMERSÃO E WORKSHOPS PRÁTICOS (SIMULTÂNEOS)</div>
+    <p class="dia-meta">Local: Complexo EVA &nbsp;|&nbsp; Data: 17 de Setembro de 2026</p>
+    <p class="dia-obs">
+      Neste dia, o público poderá escolher uma das quatro trilhas de conhecimento
+      que ocorrerão simultaneamente das 19h às 21h.
+    </p>
+
+    <div class="oficina-item">
+      <strong>Workshop 1: Administração &amp; Tecnologia</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidada:</strong> Ana Rodrigues – CFO Vsoft Tecnologia.<br>
+      <strong>Foco:</strong> Finanças, Gestão Estratégica e Tecnologia.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Workshop 2: Ciências Contábeis</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidado:</strong> Onezildo Martins – Onezildo Martins Escritório de Contabilidade.<br>
+      <strong>Foco:</strong> Atuação Paralegal e os novos desafios da contabilidade.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Workshop 3: Contabilidade Pública</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidado:</strong> Elinaldo.<br>
+      <strong>Foco:</strong> Contabilidade Pública na Era da IA.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+
+    <div class="oficina-item">
+      <strong>Workshop 4: O profissional de Marketing digital mais procurado</strong>
+      <p><strong>Local:</strong> A definir<br>
+      <strong>Convidado:</strong> Geo Sobreira.<br>
+      <strong>Foco:</strong> Desenvolva comunicação, criatividade e inteligência emocional para potencializar sua construção de marca pessoal. Una essas habilidades à visão empresarial, estratégia, negociação e vendas para resolver problemas reais de mercado.<br>
+      <strong>Tempo:</strong> 19h00 – 21h00 (Conteúdo prático + Q&amp;A)</p>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:8px;">
+    <a class="btn btn-inscricao" href="{{ url_for('inscricao') }}">
+      Fazer Inscrição ↗
+    </a>
+  </div>
+</div>
+{% endblock %}

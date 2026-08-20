@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Painel do Evento{% endblock %}
+{% block content %}
+<h1>Painel do evento</h1>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="num">{{ total }}</div>
+    <div class="label">Total de inscritos</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ dentro_agora }}</div>
+    <div class="label">Presentes agora (em algum local)</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ total - dentro_agora }}</div>
+    <div class="label">Fora / não chegaram</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ total_alunos }}</div>
+    <div class="label">Alunos</div>
+  </div>
+  <div class="kpi">
+    <div class="num">{{ total_participantes }}</div>
+    <div class="label">Participantes externos</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">📍 Ocupação por local, agora</h2>
+  <div class="ocupacao-grid">
+    {% for chave, info in locais.items() %}
+      <div class="ocupacao-item">
+        <div class="ocupacao-num">{{ presentes_por_local.get(chave, 0) }}</div>
+        <div class="ocupacao-label">{{ info.label }}</div>
+        <div class="ocupacao-dia">Dia {{ info.dia }}</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h2 style="margin:0;">Participantes</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn navy" href="{{ url_for('admin_backup') }}">💾 Baixar backup do banco</a>
+      <a class="btn orange" href="{{ url_for('exportar') }}">⬇ Exportar CSV (Excel)</a>
+    </div>
+  </div>
+
+  <div class="tabela-scroll">
+  <table style="margin-top:16px;">
+    <thead>
+      <tr>
+        <th>Nº</th>
+        <th>Nome</th>
+        <th>Tipo</th>
+        <th>E-mail</th>
+        <th>CPF</th>
+        <th>Curso / RGM</th>
+        <th>Instituição</th>
+        <th>Inscrito em</th>
+        <th>Onde está agora</th>
+        <th>Histórico de check-in / check-out</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in lista %}
+        {% set p = item.p %}
+        <tr>
+          <td style="font-family: var(--fonte-mono); font-weight: 700;">{{ p['numero_inscricao'] or '-' }}</td>
+          <td>{{ p['nome'] }}</td>
+          <td>{{ 'Aluno(a)' if p['tipo'] == 'aluno' else ('Participante' if p['tipo'] == 'participante' else '-') }}</td>
+          <td>{{ p['email'] or '-' }}</td>
+          <td>{{ p['cpf'] or '-' }}</td>
+          <td>
+            {% if p['tipo'] == 'aluno' %}
+              {{ p['curso'] or '-' }}
+              {% if p['periodo'] %}<br><span style="color:var(--muted); font-size:0.78rem;">{{ p['periodo'] }}</span>{% endif %}
+              {% if p['rgm'] %}<br><span style="color:var(--muted); font-size:0.78rem; font-family:var(--fonte-mono);">RGM {{ p['rgm'] }}</span>{% endif %}
+            {% else %}
+              {{ p['formacao'] or '-' }}
+            {% endif %}
+          </td>
+          <td>{{ p['instituicao'] or '-' }}</td>
+          <td>{{ p['criado_em'].replace('T', ' ') if p['criado_em'] else '-' }}</td>
+          <td>
+            {% if item.local_atual %}
+              <span class="badge badge-entrada">Em {{ item.local_atual }}</span>
+            {% else %}
+              <span class="badge badge-none">Fora do evento</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.visitas %}
+              <details>
+                <summary style="cursor:pointer; color:var(--navy); font-weight:600; font-size:0.85rem;">
+                  {{ item.visitas|length }} visita(s) — ver detalhes
+                </summary>
+                <table class="tabela-visitas">
+                  <thead>
+                    <tr>
+                      <th>Local</th>
+                      <th>Entrada</th>
+                      <th>Saída</th>
+                      <th>Estadia</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for v in item.visitas %}
+                      <tr>
+                        <td>{{ v.local_label }}</td>
+                        <td>{{ v.entrada.replace('T', ' ') }}</td>
+                        <td>
+                          {% if v.saida %}
+                            {{ v.saida.replace('T', ' ') }}
+                          {% else %}
+                            <span class="badge badge-entrada">Ainda dentro</span>
+                          {% endif %}
+                        </td>
+                        <td>{{ v.duracao }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </details>
+            {% else %}
+              <span style="color:var(--muted); font-size:0.85rem;">Sem registros</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('admin_excluir_participante', participante_id=p['id']) }}"
+                  onsubmit="return confirm('Excluir a inscrição de ' + {{ p['nome']|tojson }} + ' e todos os check-ins dela? Essa ação não pode ser desfeita.');">
+              <button type="submit" class="btn-excluir" title="Excluir esta inscrição">🗑️ Excluir</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="11" style="color:var(--muted); text-align:center;">Nenhum participante inscrito ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}
