@@ -101,10 +101,42 @@ NUMERO_INSCRICAO_BASE = 202600
 # obrigatório, com apenas 1 check-in e 1 check-out). Dia 2: 3 salas
 # simultâneas, entre as quais o participante pode transitar livremente.
 LOCAIS = {
-    "auditorio": {"label": "Auditório Central", "dia": 1, "unico": True},
-    "sala_1": {"label": "Sala 1", "dia": 2, "unico": False},
-    "sala_2": {"label": "Sala 2", "dia": 2, "unico": False},
-    "sala_3": {"label": "Sala 3", "dia": 2, "unico": False},
+    "auditorio": {"label": "Auditório Central", "dia": 1, "unico": True, "trilha": None},
+    "auditorio_eva": {"label": "Auditório EVA", "dia": 2, "unico": False, "trilha": 1},
+    "sala_1": {"label": "Sala 1", "dia": 2, "unico": False, "trilha": 2},
+    "sala_2": {"label": "Sala 2", "dia": 2, "unico": False, "trilha": 3},
+    "sala_3": {"label": "Sala 3", "dia": 2, "unico": False, "trilha": 4},
+}
+
+# Trilhas do Dia 2 — escolha única e obrigatória na inscrição. Cada trilha
+# está travada a um local físico específico; o QR Code só libera acesso no
+# Dia 2 se o local lido bater com a trilha da pessoa.
+TALKS = {
+    1: {
+        "titulo": "Talks 1: Administração & Tecnologia",
+        "foco": "Finanças, Gestão estratégica e Tecnologia.",
+        "local": "auditorio_eva",
+    },
+    2: {
+        "titulo": "Talks 2: Contabilidade",
+        "foco": "Atuação Paralegal e os novos desafios da contabilidade.",
+        "local": "sala_1",
+    },
+    3: {
+        "titulo": "Talks 3: Contabilidade Pública",
+        "foco": "Contabilidade Pública na era da IA.",
+        "local": "sala_2",
+    },
+    4: {
+        "titulo": "Talks 4: O profissional de Marketing digital mais procurado",
+        "foco": (
+            "Desenvolva comunicação, criatividade e inteligência emocional para "
+            "potencializar sua construção de marca pessoal. Una essas habilidades à "
+            "visão empresarial, estratégia, negociação e vendas para resolver "
+            "problemas reais de mercado."
+        ),
+        "local": "sala_3",
+    },
 }
 
 os.makedirs(QR_DIR, exist_ok=True)
@@ -281,6 +313,7 @@ def init_db():
             curso TEXT,
             periodo TEXT,
             rgm TEXT,
+            trilha_dia2 INTEGER,
             numero_inscricao INTEGER UNIQUE,
             token TEXT UNIQUE NOT NULL,
             criado_em TEXT NOT NULL
@@ -309,6 +342,7 @@ def init_db():
         "ALTER TABLE participantes ADD COLUMN curso TEXT",
         "ALTER TABLE participantes ADD COLUMN periodo TEXT",
         "ALTER TABLE participantes ADD COLUMN rgm TEXT",
+        "ALTER TABLE participantes ADD COLUMN trilha_dia2 INTEGER",
         "ALTER TABLE eventos_acesso ADD COLUMN local TEXT",
     ]
     for comando in colunas_novas:
@@ -467,6 +501,16 @@ def gerar_pdf_credencial(participante) -> bytes:
     c.setFont("Helvetica-Bold", 13)
     c.drawCentredString(largura / 2, selo_y + selo_altura / 2 - 4.6, texto_num)
 
+    # --- Onde acontece a Talks da pessoa no Dia 2 (orienta o acesso) ---
+    trilha_pessoa = participante["trilha_dia2"]
+    if trilha_pessoa in TALKS:
+        local_talk = LOCAIS[TALKS[trilha_pessoa]["local"]]["label"]
+        texto_talk = f"Talks {trilha_pessoa} · Dia 2 — {local_talk}"
+        y_talk = selo_y - 8 * mm
+        c.setFont("Helvetica-Bold", 10.5)
+        c.setFillColorRGB(0x1b / 255, 0x15 / 255, 0x33 / 255)
+        c.drawCentredString(largura / 2, y_talk, texto_talk)
+
     # --- Canhoto perfurado, como em um ingresso de verdade ---
     linha_perfuracao_y = 26 * mm
     c.setFillColorRGB(0.985, 0.98, 0.975)
@@ -603,7 +647,6 @@ def inscricao():
         email = request.form.get("email", "").strip()
         formacao = request.form.get("formacao", "").strip()
         instituicao = request.form.get("instituicao", "").strip()
-        cpf = request.form.get("cpf", "").strip()
         # Curso, período e RGM só fazem sentido pra quem é aluno — mesmo
         # que o campo tenha sido preenchido no navegador (ex.: JS
         # desabilitado), ignoramos esses valores se a pessoa marcou
@@ -615,6 +658,8 @@ def inscricao():
         else:
             curso = periodo = rgm = ""
 
+        trilha_raw = request.form.get("trilha_dia2", "").strip()
+
         if not nome:
             flash("O nome é obrigatório.", "erro")
             return redirect(url_for("inscricao"))
@@ -622,6 +667,11 @@ def inscricao():
         if tipo not in ("aluno", "participante"):
             flash("Selecione se você é aluno ou participante externo.", "erro")
             return redirect(url_for("inscricao"))
+
+        if trilha_raw not in ("1", "2", "3", "4"):
+            flash("Escolha uma trilha (Talks) para o Dia 2.", "erro")
+            return redirect(url_for("inscricao"))
+        trilha_dia2 = int(trilha_raw)
 
         token = uuid.uuid4().hex[:12]
         db = get_db()
@@ -634,9 +684,9 @@ def inscricao():
             numero_inscricao = proximo_numero_inscricao(db)
             try:
                 db.execute(
-                    "INSERT INTO participantes (nome, tipo, email, formacao, instituicao, cpf, curso, periodo, rgm, token, numero_inscricao, criado_em) "
+                    "INSERT INTO participantes (nome, tipo, email, formacao, instituicao, curso, periodo, rgm, trilha_dia2, token, numero_inscricao, criado_em) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (nome, tipo, email, formacao, instituicao, cpf, curso, periodo, rgm, token, numero_inscricao, datetime.now().isoformat(timespec="seconds")),
+                    (nome, tipo, email, formacao, instituicao, curso, periodo, rgm, trilha_dia2, token, numero_inscricao, datetime.now().isoformat(timespec="seconds")),
                 )
                 db.commit()
                 break
@@ -649,7 +699,7 @@ def inscricao():
         gerar_qrcode(token)
         return redirect(url_for("confirmacao", token=token))
 
-    return render_template("inscricao.html")
+    return render_template("inscricao.html", talks=TALKS)
 
 
 @app.route("/confirmacao/<token>")
@@ -726,6 +776,25 @@ def logout():
 # ---------------------------------------------------------------------------
 # Painel administrativo
 # ---------------------------------------------------------------------------
+def visita_completa_em(visitas, local_chave):
+    """True se existe pelo menos uma visita FECHADA (entrada + saída) naquele
+    local — usado pra calcular se a pessoa cumpriu presença naquele dia,
+    critério pra emissão do certificado."""
+    return any(v["local"] == local_chave and not v["em_andamento"] for v in visitas)
+
+
+def calcular_apto_certificado(visitas, trilha_dia2):
+    """Apto ao certificado = presença completa (entrada+saída) no Auditório
+    Central (Dia 1) E no local da trilha escolhida pra o Dia 2."""
+    dia1_ok = visita_completa_em(visitas, "auditorio")
+    if trilha_dia2 in TALKS:
+        local_dia2 = TALKS[trilha_dia2]["local"]
+        dia2_ok = visita_completa_em(visitas, local_dia2)
+    else:
+        dia2_ok = False
+    return dia1_ok and dia2_ok, dia1_ok, dia2_ok
+
+
 @app.route("/painel")
 @admin_required
 def painel():
@@ -756,6 +825,9 @@ def painel():
         ultima_entrada = visitas[-1]["entrada"] if visitas else None
         ultima_saida = next((v["saida"] for v in reversed(visitas) if v["saida"]), None)
 
+        apto, dia1_ok, dia2_ok = calcular_apto_certificado(visitas, p["trilha_dia2"])
+        talk_info = TALKS.get(p["trilha_dia2"])
+
         lista.append(
             {
                 "p": p,
@@ -763,6 +835,10 @@ def painel():
                 "local_atual": visita_aberta["local_label"] if visita_aberta else None,
                 "ultima_entrada": ultima_entrada,
                 "ultima_saida": ultima_saida,
+                "talk_titulo": talk_info["titulo"] if talk_info else None,
+                "apto_certificado": apto,
+                "dia1_ok": dia1_ok,
+                "dia2_ok": dia2_ok,
             }
         )
 
@@ -776,6 +852,7 @@ def painel():
         dentro_agora=dentro_agora,
         presentes_por_local=presentes_por_local,
         locais=LOCAIS,
+        talks=TALKS,
         total_alunos=total_alunos,
         total_participantes=total_participantes,
     )
@@ -826,6 +903,24 @@ def api_checkin():
         return jsonify({"ok": False, "mensagem": "Participante não encontrado."}), 404
 
     info_local = LOCAIS[local]
+
+    # Regra de validação por trilha: no Dia 1 (Auditório Central) o acesso é
+    # liberado geral pra qualquer inscrito. No Dia 2, o QR só libera se o
+    # local lido bater com a trilha (Talks) escolhida na inscrição da
+    # pessoa — impede alguém da Talks 3 entrar na sala da Talks 1, por ex.
+    if info_local["dia"] == 2:
+        trilha_exigida = info_local["trilha"]
+        if participante["trilha_dia2"] != trilha_exigida:
+            trilha_pessoa = participante["trilha_dia2"]
+            if trilha_pessoa in TALKS:
+                local_certo = LOCAIS[TALKS[trilha_pessoa]["local"]]["label"]
+                mensagem = (
+                    f"🚫 NEGADO — {participante['nome']} está inscrito na "
+                    f"Talks {trilha_pessoa} ({local_certo}), não em {info_local['label']}."
+                )
+            else:
+                mensagem = f"🚫 NEGADO — {participante['nome']} não tem trilha do Dia 2 definida."
+            return jsonify({"ok": False, "mensagem": mensagem}), 403
 
     eventos_local = db.execute(
         "SELECT tipo, horario FROM eventos_acesso WHERE participante_id = ? AND local = ? "
@@ -983,8 +1078,9 @@ def exportar():
     writer = csv.writer(output, delimiter=";")
     writer.writerow(
         [
-            "Nº Inscrição", "Nome", "Tipo (aluno/participante)", "E-mail", "CPF",
+            "Nº Inscrição", "Nome", "Tipo (aluno/participante)", "E-mail",
             "Curso", "Período", "RGM", "Formação (externo)", "Instituição", "Inscrito em",
+            "Talks (Dia 2)", "Presença Dia 1 completa", "Presença Dia 2 completa", "Apto ao certificado",
             "Local", "Data/Hora Entrada", "Data/Hora Saída", "Tempo de Estadia",
         ]
     )
@@ -995,12 +1091,20 @@ def exportar():
             "ORDER BY horario ASC",
             (p["id"],),
         ).fetchall()
-        base = [
-            p["numero_inscricao"], p["nome"], p["tipo"], p["email"], p["cpf"],
-            p["curso"], p["periodo"], p["rgm"], p["formacao"], p["instituicao"], p["criado_em"],
-        ]
 
         visitas = montar_visitas(eventos)
+        apto, dia1_ok, dia2_ok = calcular_apto_certificado(visitas, p["trilha_dia2"])
+        talk_info = TALKS.get(p["trilha_dia2"])
+
+        base = [
+            p["numero_inscricao"], p["nome"], p["tipo"], p["email"],
+            p["curso"], p["periodo"], p["rgm"], p["formacao"], p["instituicao"], p["criado_em"],
+            talk_info["titulo"] if talk_info else "-",
+            "Sim" if dia1_ok else "Não",
+            "Sim" if dia2_ok else "Não",
+            "Sim" if apto else "Não",
+        ]
+
         if not visitas:
             writer.writerow(base + ["", "", "", ""])
             continue

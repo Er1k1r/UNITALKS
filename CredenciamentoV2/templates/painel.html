@@ -56,9 +56,10 @@
         <th>Nome</th>
         <th>Tipo</th>
         <th>E-mail</th>
-        <th>CPF</th>
         <th>Curso / RGM</th>
         <th>Instituição</th>
+        <th>Trilha (Dia 2)</th>
+        <th>Certificado</th>
         <th>Inscrito em</th>
         <th>Onde está agora</th>
         <th>Histórico de check-in / check-out</th>
@@ -73,7 +74,6 @@
           <td>{{ p['nome'] }}</td>
           <td>{{ 'Aluno(a)' if p['tipo'] == 'aluno' else ('Participante' if p['tipo'] == 'participante' else '-') }}</td>
           <td>{{ p['email'] or '-' }}</td>
-          <td>{{ p['cpf'] or '-' }}</td>
           <td>
             {% if p['tipo'] == 'aluno' %}
               {{ p['curso'] or '-' }}
@@ -84,6 +84,14 @@
             {% endif %}
           </td>
           <td>{{ p['instituicao'] or '-' }}</td>
+          <td style="font-size:0.82rem;">{{ item.talk_titulo or '-' }}</td>
+          <td>
+            {% if item.apto_certificado %}
+              <span class="badge badge-entrada">✓ Apto</span>
+            {% else %}
+              <span class="badge badge-none" title="Dia 1: {{ '✓' if item.dia1_ok else '✗' }} · Dia 2: {{ '✓' if item.dia2_ok else '✗' }}">Pendente</span>
+            {% endif %}
+          </td>
           <td>{{ p['criado_em'].replace('T', ' ') if p['criado_em'] else '-' }}</td>
           <td>
             {% if item.local_atual %}
@@ -137,7 +145,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="11" style="color:var(--muted); text-align:center;">Nenhum participante inscrito ainda.</td></tr>
+        <tr><td colspan="12" style="color:var(--muted); text-align:center;">Nenhum participante inscrito ainda.</td></tr>
       {% endfor %}
     </tbody>
   </table>
