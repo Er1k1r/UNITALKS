@@ -1239,6 +1239,22 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   line-height: 1.5;
 }
 
+/* Selo "a confirmar" pra convidados/locais ainda não fechados — chama
+   atenção sem parecer erro (âmbar, não vermelho). */
+.tag-confirmar {
+  display: inline-block;
+  font-family: var(--fonte-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1b1533;
+  background: linear-gradient(90deg, #ffc157, #ff6b4a);
+  padding: 2px 8px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
 .oficina-item {
   position: relative;
   padding: 14px 0 14px 22px;
