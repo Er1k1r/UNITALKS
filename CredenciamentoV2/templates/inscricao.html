@@ -53,11 +53,14 @@
     </p>
     <div class="trilha-grupo">
       {% for n, t in talks.items() %}
-      <label class="trilha-card">
-        <input type="radio" name="trilha_dia2" value="{{ n }}" required>
+      <label class="trilha-card{{ ' sem-vagas' if not t.vagas_abertas else '' }}">
+        <input type="radio" name="trilha_dia2" value="{{ n }}" required{{ ' disabled' if not t.vagas_abertas else '' }}>
         <span class="trilha-card-conteudo">
           <span class="trilha-tag">Talks {{ n }}</span>
-          <strong>{{ t.titulo.split(': ')[1] }}</strong>
+          {% if not t.vagas_abertas %}<span class="tag-sem-vagas">Sem vagas</span>{% endif %}
+          {% for parte in t.titulo.split(': ')[1].split(' | ') %}
+          <strong>{{ parte }}</strong>
+          {% endfor %}
           <span class="trilha-foco">{{ t.foco }}</span>
         </span>
         <span class="trilha-check">✓</span>
