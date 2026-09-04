@@ -1154,6 +1154,33 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   font-weight: 700;
 }
 
+/* Trilha com inscrições encerradas ("sem vagas"): cartão continua visível
+   (mostra o que existe no Dia 2), mas fica visualmente inativo e o rádio
+   é desabilitado — não dá pra selecionar nem pelo teclado. */
+.trilha-card.sem-vagas {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #efeae1;
+}
+.trilha-card.sem-vagas:hover { transform: none; }
+.trilha-card.sem-vagas .trilha-check { display: none; }
+
+/* Selo "sem vagas", no mesmo estilo do "a confirmar" mas em tom neutro
+   (cinza), pra não parecer erro nem alarme — só indisponibilidade. */
+.tag-sem-vagas {
+  display: inline-block;
+  font-family: var(--fonte-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b6478;
+  background: #e4dfea;
+  padding: 2px 8px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
 .aviso-campo {
   background: #fdf1e6;
   color: #a5560f;
