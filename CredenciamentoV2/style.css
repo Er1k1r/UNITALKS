@@ -43,7 +43,7 @@ body {
 }
 
 .topbar-inner {
-  width: 98%;
+  width: 85%;
   max-width: 1800px;
   margin: 0 auto;
   padding: 12px 0;
@@ -213,7 +213,7 @@ body {
 }
 
 .container {
-  width: 98%;
+  width: 85%;
   max-width: 1800px;
   margin: 0 auto;
   padding: 22px 0 44px;
@@ -1074,6 +1074,113 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 }
 .tipo-opcao input { width: auto; margin: 0; }
 
+/* --- Seleção de trilha (Talks) do Dia 2: cartões grandes, único ativo --- */
+.trilha-grupo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+@media (max-width: 560px) {
+  .trilha-grupo { grid-template-columns: 1fr; }
+}
+.trilha-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: var(--card);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.trilha-card:hover { transform: translateY(-1px); }
+.trilha-card input {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+  margin: 0;
+}
+.trilha-card:has(input:checked),
+.trilha-card.selecionada {
+  border-color: var(--orange);
+  background: linear-gradient(135deg, rgba(255,193,87,0.12), rgba(255,107,74,0.08));
+}
+.trilha-card-conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.trilha-tag {
+  font-family: var(--fonte-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--magenta);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.trilha-card strong {
+  font-family: var(--fonte-titulo);
+  font-size: 0.98rem;
+  color: var(--navy);
+  line-height: 1.25;
+}
+.trilha-foco {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.trilha-check {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: transparent;
+  transition: all 0.15s;
+}
+.trilha-card:has(input:checked) .trilha-check,
+.trilha-card.selecionada .trilha-check {
+  border-color: var(--orange);
+  background: linear-gradient(135deg, var(--orange), var(--magenta));
+  color: var(--navy);
+  font-weight: 700;
+}
+
+/* Trilha com inscrições encerradas ("sem vagas"): cartão continua visível
+   (mostra o que existe no Dia 2), mas fica visualmente inativo e o rádio
+   é desabilitado — não dá pra selecionar nem pelo teclado. */
+.trilha-card.sem-vagas {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #efeae1;
+}
+.trilha-card.sem-vagas:hover { transform: none; }
+.trilha-card.sem-vagas .trilha-check { display: none; }
+
+/* Selo "sem vagas", no mesmo estilo do "a confirmar" mas em tom neutro
+   (cinza), pra não parecer erro nem alarme — só indisponibilidade. */
+.tag-sem-vagas {
+  display: inline-block;
+  font-family: var(--fonte-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b6478;
+  background: #e4dfea;
+  padding: 2px 8px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
 .aviso-campo {
   background: #fdf1e6;
   color: #a5560f;
@@ -1159,6 +1266,22 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   line-height: 1.5;
 }
 
+/* Selo "a confirmar" pra convidados/locais ainda não fechados — chama
+   atenção sem parecer erro (âmbar, não vermelho). */
+.tag-confirmar {
+  display: inline-block;
+  font-family: var(--fonte-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1b1533;
+  background: linear-gradient(90deg, #ffc157, #ff6b4a);
+  padding: 2px 8px;
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
 .oficina-item {
   position: relative;
   padding: 14px 0 14px 22px;
@@ -1175,10 +1298,20 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   background: linear-gradient(180deg, #ffc157, #ff6b4a);
 }
 .oficina-item strong {
-  display: block;
   color: white;
+  font-weight: 700;
+}
+.oficina-titulo {
+  display: block;
   font-size: 0.98rem;
   margin-bottom: 6px;
+}
+/* Rótulos "Local:", "Convidada:", "Foco:", "Tempo:" ficam lado a lado com
+   o próprio valor (não quebram linha), só o texto sozinho e mais forte
+   pra escanear rápido. */
+.oficina-item p strong {
+  color: #ffc157;
+  font-size: 0.87rem;
 }
 .oficina-item p {
   margin: 4px 0;

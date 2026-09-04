@@ -113,19 +113,25 @@ LOCAIS = {
 # Dia 2 se o local lido bater com a trilha da pessoa.
 TALKS = {
     1: {
-        "titulo": "Talks 1: Administração & Tecnologia",
+        "titulo": "Talks 1: Administração & Tecnologia | Empreendedorismo",
         "foco": "Finanças, Gestão estratégica e Tecnologia.",
         "local": "auditorio_eva",
+        # Inscrições fechadas a pedido do cliente. A numeração 1-4 é mantida
+        # (já existem inscritos com trilha_dia2 = 1/2/4 no banco) — só as
+        # NOVAS inscrições ficam bloqueadas pra quem ainda não escolheu.
+        "vagas_abertas": False,
     },
     2: {
         "titulo": "Talks 2: Contabilidade",
         "foco": "Atuação Paralegal e os novos desafios da contabilidade.",
         "local": "sala_1",
+        "vagas_abertas": False,
     },
     3: {
         "titulo": "Talks 3: Contabilidade Pública",
         "foco": "Contabilidade Pública na era da IA.",
         "local": "sala_2",
+        "vagas_abertas": True,
     },
     4: {
         "titulo": "Talks 4: O profissional de Marketing digital mais procurado",
@@ -136,6 +142,7 @@ TALKS = {
             "problemas reais de mercado."
         ),
         "local": "sala_3",
+        "vagas_abertas": False,
     },
 }
 
@@ -672,6 +679,15 @@ def inscricao():
             flash("Escolha uma trilha (Talks) para o Dia 2.", "erro")
             return redirect(url_for("inscricao"))
         trilha_dia2 = int(trilha_raw)
+
+        # Trilhas com inscrições encerradas ("sem vagas") não podem ser
+        # escolhidas por NOVOS inscritos, mesmo que alguém tente burlar o
+        # formulário (ex.: reativando o campo desabilitado no navegador).
+        # Quem já está inscrito numa dessas trilhas não é afetado — a
+        # numeração 1-4 no banco continua igual.
+        if not TALKS[trilha_dia2]["vagas_abertas"]:
+            flash("Essa trilha está com as inscrições encerradas (sem vagas). Escolha outra.", "erro")
+            return redirect(url_for("inscricao"))
 
         token = uuid.uuid4().hex[:12]
         db = get_db()
