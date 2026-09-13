@@ -55,6 +55,12 @@ app = Flask(__name__)
 # o tempo de carregamento nas visitas seguintes.
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60 * 60 * 24 * 7
 
+# Limite de tamanho de upload (usado pela restauração de backup no painel,
+# única rota que recebe arquivo). O banco do evento inteiro tem só algumas
+# dezenas de KB por centena de inscritos, então 100 MB é bem folgado —
+# só existe pra evitar um upload gigante por engano ou abuso.
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
+
 
 @app.context_processor
 def util_static_versionado():
@@ -98,14 +104,22 @@ app.permanent_session_lifetime = timedelta(hours=18)
 NUMERO_INSCRICAO_BASE = 202600
 
 # Locais de credenciamento do evento. Dia 1: só o Auditório Central (acesso
-# obrigatório, com apenas 1 check-in e 1 check-out). Dia 2: 3 salas
+# obrigatório, com apenas 1 check-in e 1 check-out). Dia 2: 4 salas
 # simultâneas, entre as quais o participante pode transitar livremente.
+#
+# Nomes das salas do Dia 2 confirmados em 13/09 (o local físico de cada
+# trilha mudou de nome — a chave interna de cada uma foi mantida igual pra
+# não mexer em nada mais no código, só o texto exibido pro usuário mudou):
+#   Talks 1 -> Auditório EVA          (sem mudança)
+#   Talks 2 -> Auditório Bloco E E89  (era "Sala 1")
+#   Talks 3 -> Eva Sala 1             (era "Sala 2")
+#   Talks 4 -> Eva Sala 2             (era "Sala 3")
 LOCAIS = {
     "auditorio": {"label": "Auditório Central", "dia": 1, "unico": True, "trilha": None},
     "auditorio_eva": {"label": "Auditório EVA", "dia": 2, "unico": False, "trilha": 1},
-    "sala_1": {"label": "Sala 1", "dia": 2, "unico": False, "trilha": 2},
-    "sala_2": {"label": "Sala 2", "dia": 2, "unico": False, "trilha": 3},
-    "sala_3": {"label": "Sala 3", "dia": 2, "unico": False, "trilha": 4},
+    "sala_1": {"label": "Auditório Bloco E E89", "dia": 2, "unico": False, "trilha": 2},
+    "sala_2": {"label": "Eva Sala 1", "dia": 2, "unico": False, "trilha": 3},
+    "sala_3": {"label": "Eva Sala 2", "dia": 2, "unico": False, "trilha": 4},
 }
 
 # Trilhas do Dia 2 — escolha única e obrigatória na inscrição. Cada trilha
@@ -131,7 +145,8 @@ TALKS = {
         "titulo": "Talks 3: Contabilidade Pública",
         "foco": "Contabilidade Pública na era da IA.",
         "local": "sala_2",
-        "vagas_abertas": True,
+        # Fechada em 13/09 — as 4 trilhas do Dia 2 estão sem vaga agora.
+        "vagas_abertas": False,
     },
     4: {
         "titulo": "Talks 4: O profissional de Marketing digital mais procurado",
@@ -229,6 +244,33 @@ def gerar_backup_db() -> bytes:
     finally:
         os.remove(tmp_path)
     return dados
+
+
+def validar_backup_db(caminho: str):
+    """Confere que 'caminho' é um arquivo SQLite válido e que parece
+    realmente um backup do UniTalks (tem a tabela 'participantes' com as
+    colunas essenciais). Retorna (True, None) se aceitar, ou
+    (False, motivo) com uma mensagem clara pra recusar. Usado antes de
+    aceitar qualquer restauração de backup enviada pelo painel — não
+    confia só na extensão do arquivo."""
+    try:
+        con = sqlite3.connect(f"file:{caminho}?mode=ro", uri=True)
+        try:
+            linhas = con.execute("PRAGMA table_info(participantes)").fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return False, "o arquivo não é um banco SQLite válido."
+
+    colunas = {linha[1] for linha in linhas}
+    obrigatorias = {"nome", "token", "numero_inscricao", "tipo"}
+    faltando = obrigatorias - colunas
+    if faltando:
+        return False, (
+            "não parece um backup do UniTalks — faltam colunas essenciais "
+            f"na tabela 'participantes' ({', '.join(sorted(faltando))})."
+        )
+    return True, None
 
 
 def enviar_backup_por_email():
@@ -619,6 +661,128 @@ def montar_visitas(eventos):
 
 
 # ---------------------------------------------------------------------------
+# Check-out automático às 21h
+# ---------------------------------------------------------------------------
+# Fluxo combinado, conforme definido com o cliente:
+#   1) Check-in: obrigatório na entrada (já existente, via /api/checkin).
+#   2) Check-out antecipado: quem sai antes das 21h escaneia de novo na
+#      recepção (já existente — o /api/checkin alterna entrada/saída).
+#   3) Check-out automático: quem NÃO deu saída antecipada e ficou até o
+#      encerramento recebe, às 21h, um check-out automático — sem isso,
+#      ficaria com a visita "em aberto" pra sempre e não teria direito ao
+#      certificado (calcular_apto_certificado exige entrada E saída).
+#
+# Roda de dois jeitos, os dois chamando a mesma função por baixo:
+#   - Sozinho, todo dia às 21h (agendador em segundo plano — funciona sem
+#     depender de rede, então funciona mesmo no Render free) — fecha TODAS
+#     as salas de uma vez, é o "varredura final" do dia.
+#   - Manualmente, pelo botão "Rodar check-out das 21h" no painel (também
+#     todas as salas) — reforço caso o servidor tenha reiniciado bem na
+#     hora, ou pra reprocessar.
+#   - Manualmente, POR SALA, pelo botão "Encerrar sala" no painel — pra
+#     quando uma Talks específica termina antes das 21h: fecha só quem
+#     ainda está naquela sala, na hora real do clique (não espera as 21h).
+def fechar_visitas_abertas(db, horario_corte: datetime, local: str = None) -> list:
+    """Fecha (insere 'saída') toda visita que ainda estiver em aberto — quem
+    fez check-in num local e não tem check-out registrado lá — usando
+    `horario_corte` como horário da saída (ou o horário da própria entrada,
+    se por algum motivo ela for mais tarde que o corte — nunca gera uma
+    saída "antes" da entrada). Se `local` for informado, só mexe nas
+    visitas ABERTAS NAQUELE local específico (usado pelo "Encerrar sala");
+    se `local` for None, fecha em qualquer local (usado pela varredura das
+    21h, geral). É idempotente: cada visita só é fechada uma vez, então
+    rodar de novo depois não duplica nada, só fecha o que ainda estiver
+    aberto naquele momento. Retorna a lista de quem foi fechado (nome +
+    local), pra poder mostrar um resumo pra quem disparou."""
+    participantes = db.execute("SELECT id, nome FROM participantes").fetchall()
+    fechados = []
+    for p in participantes:
+        eventos = db.execute(
+            "SELECT tipo, horario, local FROM eventos_acesso WHERE participante_id = ? ORDER BY horario ASC",
+            (p["id"],),
+        ).fetchall()
+        for v in montar_visitas(eventos):
+            if not v["em_andamento"]:
+                continue
+            if local is not None and v["local"] != local:
+                continue
+            entrada_dt = datetime.fromisoformat(v["entrada"])
+            horario_final = max(horario_corte, entrada_dt)
+            db.execute(
+                "INSERT INTO eventos_acesso (participante_id, tipo, horario, local) VALUES (?, 'saida', ?, ?)",
+                (p["id"], horario_final.isoformat(timespec="seconds"), v["local"]),
+            )
+            fechados.append({
+                "nome": p["nome"],
+                "local_label": LOCAIS.get(v["local"], {}).get("label", v["local"]),
+            })
+    if fechados:
+        db.commit()
+    return fechados
+
+
+def job_checkout_automatico_21h():
+    """Chamado pelo agendador em segundo plano — roda fora de uma requisição
+    Flask, então abre a própria conexão com o banco (não pode usar
+    get_db()/g, que só existem dentro de uma requisição)."""
+    con = sqlite3.connect(DB_PATH, timeout=10)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA busy_timeout = 10000")
+    try:
+        agora = datetime.now()
+        corte = agora.replace(hour=21, minute=0, second=0, microsecond=0)
+        fechados = fechar_visitas_abertas(con, corte)
+        logger.info("Check-out automático (21h): %d visita(s) fechada(s).", len(fechados))
+    except Exception:
+        logger.exception("Falha ao rodar o check-out automático das 21h")
+    finally:
+        con.close()
+
+
+def iniciar_agendador_checkout():
+    """Liga o job de check-out automático das 21h, todo dia, independente de
+    qualquer configuração de e-mail (ao contrário do agendador de backup).
+    Se o APScheduler não estiver instalado, o recurso continua funcionando
+    pelo botão manual no painel — só o disparo sozinho às 21h que não
+    acontece."""
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+    except ImportError:
+        logger.warning(
+            "APScheduler não instalado — o check-out automático das 21h só "
+            "funciona pelo botão manual no painel."
+        )
+        return
+
+    # Sem 'timezone' explícito de propósito: o resto do sistema todo (horário
+    # de check-in, check-out manual, backup, etc.) usa datetime.now() puro,
+    # sem timezone — ou seja, já assume que o relógio do sistema operacional
+    # está no horário de João Pessoa/PB. Se o agendador usasse um timezone
+    # diferente do relógio do sistema, "21h" aqui e "21h" no resto do app
+    # deixariam de ser o mesmo instante real. Deixando sem timezone, o
+    # agendador segue o relógio local do sistema — o mesmo que datetime.now()
+    # usa —, garantindo que os dois batem sempre, seja qual for o fuso
+    # configurado no servidor (Render ou local). IMPORTANTE: isso só fica
+    # correto de verdade se o relógio do servidor estiver mesmo no horário de
+    # Brasília/João Pessoa (UTC-3) — vale conferir isso no Render (variável
+    # de ambiente TZ) antes do evento, já que o check-in normal já depende
+    # disso há tempos.
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.add_job(
+        job_checkout_automatico_21h, "cron", hour=21, minute=0,
+        id="checkout_21h", replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("Agendador de check-out automático (21h, todo dia) ligado.")
+
+
+# Liga o agendador uma vez, quando o módulo é importado (tanto pelo
+# `python app.py` local quanto pelo gunicorn em produção) — igual ao
+# agendador de backup, mas sem depender de nenhuma variável de ambiente.
+iniciar_agendador_checkout()
+
+
+# ---------------------------------------------------------------------------
 # Página inicial do evento
 # ---------------------------------------------------------------------------
 @app.route("/", methods=["GET"])
@@ -648,7 +812,17 @@ def proximo_numero_inscricao(db) -> int:
 # ---------------------------------------------------------------------------
 @app.route("/inscricao", methods=["GET", "POST"])
 def inscricao():
+    # Se nenhuma trilha do Dia 2 estiver com vaga aberta, as inscrições do
+    # evento inteiro são consideradas encerradas (o Dia 2 é obrigatório pra
+    # todo mundo). Isso é recalculado a cada request a partir do TALKS —
+    # basta reabrir alguma trilha (vagas_abertas=True) pra reabrir aqui.
+    inscricoes_abertas = any(t["vagas_abertas"] for t in TALKS.values())
+
     if request.method == "POST":
+        if not inscricoes_abertas:
+            flash("As inscrições do UniTalks 2026 estão encerradas.", "erro")
+            return redirect(url_for("inscricao"))
+
         nome = request.form.get("nome", "").strip()
         tipo = request.form.get("tipo", "").strip()
         email = request.form.get("email", "").strip()
@@ -715,7 +889,7 @@ def inscricao():
         gerar_qrcode(token)
         return redirect(url_for("confirmacao", token=token))
 
-    return render_template("inscricao.html", talks=TALKS)
+    return render_template("inscricao.html", talks=TALKS, inscricoes_abertas=inscricoes_abertas)
 
 
 @app.route("/confirmacao/<token>")
@@ -1060,6 +1234,150 @@ def admin_backup():
         as_attachment=True,
         download_name=f"backup_unitalks_{carimbo}.db",
     )
+
+
+@app.route("/admin/backup/restaurar", methods=["POST"])
+@admin_required
+def admin_restaurar_backup():
+    """Restaura o banco INTEIRO a partir de um arquivo .db enviado pelo ADM
+    no painel — usado quando o disco efêmero do Render reseta os dados (ou
+    qualquer outra perda) e é preciso repor um backup salvo.
+
+    Passos, nessa ordem, pensados pra nunca deixar o site num estado pior
+    do que estava:
+      1) Exige a confirmação explícita da checkbox (sem ela, nem olha o
+         arquivo).
+      2) Salva o upload num arquivo temporário e valida que É de fato um
+         backup do UniTalks (SQLite válido + colunas essenciais da tabela
+         'participantes') — recusa qualquer coisa que não pareça isso.
+      3) Gera um backup de segurança do banco ATUAL e salva no servidor
+         (_pre_restore_<timestamp>.db) ANTES de trocar qualquer coisa — se
+         o arquivo enviado for ruim ou for engano, o estado anterior
+         continua recuperável mesmo sem download manual prévio.
+      4) Fecha a conexão desta requisição, troca o arquivo com os.replace()
+         (troca atômica — nunca deixa o banco pela metade) e limpa os
+         arquivos -wal/-shm que sobrariam apontando pro banco antigo.
+    """
+    confirmou = request.form.get("confirmar_restauracao") == "on"
+    if not confirmou:
+        flash("Marque a confirmação (\"Entendo que isso substitui todos os dados atuais\") antes de restaurar.", "erro")
+        return redirect(url_for("painel"))
+
+    arquivo = request.files.get("arquivo_db")
+    if not arquivo or not arquivo.filename:
+        flash("Selecione um arquivo .db para restaurar.", "erro")
+        return redirect(url_for("painel"))
+
+    tmp_upload_path = os.path.join(BASE_DIR, f"_restore_upload_{uuid.uuid4().hex}.db")
+    arquivo.save(tmp_upload_path)
+
+    try:
+        valido, motivo = validar_backup_db(tmp_upload_path)
+        if not valido:
+            flash(f"❌ Arquivo recusado: {motivo}", "erro")
+            return redirect(url_for("painel"))
+
+        # Rede de segurança: backup do banco ATUAL, salvo no servidor, ANTES
+        # de sobrescrever qualquer coisa.
+        carimbo = datetime.now().strftime("%Y%m%d_%H%M%S")
+        pre_restore_path = os.path.join(BASE_DIR, f"_pre_restore_{carimbo}.db")
+        try:
+            dados_atuais = gerar_backup_db()
+            with open(pre_restore_path, "wb") as f:
+                f.write(dados_atuais)
+        except Exception:
+            logger.exception("Falha ao gerar backup de segurança antes da restauração")
+            flash("Não foi possível gerar o backup de segurança automático — restauração cancelada por precaução.", "erro")
+            return redirect(url_for("painel"))
+
+        # Fecha a conexão SQLite desta requisição antes de trocar o arquivo.
+        close_db()
+
+        os.replace(tmp_upload_path, DB_PATH)
+
+        # Limpa os arquivos do modo WAL que sobrariam apontando pro banco
+        # antigo (senão o SQLite pode tentar "recuperar" writes do banco
+        # anterior na próxima conexão).
+        for sufixo in ("-wal", "-shm"):
+            caminho_stale = DB_PATH + sufixo
+            if os.path.exists(caminho_stale):
+                os.remove(caminho_stale)
+
+        logger.info(
+            "Banco restaurado via painel administrativo. Backup de segurança do estado anterior em %s",
+            pre_restore_path,
+        )
+        flash(
+            f"✅ Backup restaurado com sucesso! O estado anterior foi salvo em backup de segurança "
+            f"no servidor ({os.path.basename(pre_restore_path)}).",
+            "sucesso",
+        )
+        return redirect(url_for("painel"))
+    finally:
+        # Limpa o upload temporário E os -wal/-shm que a validação em modo
+        # somente-leitura pode ter criado do lado dele (se o .db enviado já
+        # estivesse em modo WAL) — sem isso, esses dois arquivos ficavam
+        # órfãos na pasta do projeto a cada restauração.
+        for caminho in (tmp_upload_path, tmp_upload_path + "-wal", tmp_upload_path + "-shm"):
+            if os.path.exists(caminho):
+                os.remove(caminho)
+
+
+@app.route("/admin/checkout-21h", methods=["POST"])
+@admin_required
+def admin_checkout_21h():
+    """Botão manual no painel: roda agora o mesmo fechamento das 21h que o
+    agendador automático faz sozinho todo dia. Serve de reforço — caso o
+    servidor tenha reiniciado bem na hora e o agendador tenha perdido o
+    horário — ou pra reprocessar de novo se alguém ficou "em aberto" até o
+    fim do evento. Só libera depois das 21h do dia (evita fechar gente que
+    ainda está legitimamente dentro, se alguém clicar mais cedo por
+    engano)."""
+    agora = datetime.now()
+    corte = agora.replace(hour=21, minute=0, second=0, microsecond=0)
+    if agora < corte:
+        flash(
+            f"Ainda não são 21h — esse botão fecha quem ficou até o encerramento, "
+            f"então só libera a partir das 21h (agora são {agora.strftime('%H:%M')}).",
+            "erro",
+        )
+        return redirect(url_for("painel"))
+
+    db = get_db()
+    fechados = fechar_visitas_abertas(db, corte)
+    if fechados:
+        resumo = ", ".join(f"{f['nome']} ({f['local_label']})" for f in fechados[:8])
+        a_mais = f" e mais {len(fechados) - 8}" if len(fechados) > 8 else ""
+        flash(f"✅ Check-out das 21h aplicado a {len(fechados)} pessoa(s): {resumo}{a_mais}.", "sucesso")
+    else:
+        flash("Nenhuma visita em aberto agora — nada pra fechar.", "sucesso")
+    return redirect(url_for("painel"))
+
+
+@app.route("/admin/checkout-sala/<local_chave>", methods=["POST"])
+@admin_required
+def admin_checkout_sala(local_chave):
+    """Botão "Encerrar sala" no painel, um por local (na grade de ocupação
+    ao vivo): fecha, na hora REAL do clique (não espera as 21h), quem ainda
+    estiver com entrada aberta só NAQUELA sala — pra quando uma Talks
+    específica termina antes do horário previsto. As outras salas não são
+    afetadas. Só o ADM pode usar (mexe em check-in/check-out de várias
+    pessoas de uma vez)."""
+    if local_chave not in LOCAIS:
+        flash("Local inválido.", "erro")
+        return redirect(url_for("painel"))
+
+    db = get_db()
+    agora = datetime.now()
+    fechados = fechar_visitas_abertas(db, agora, local=local_chave)
+    nome_local = LOCAIS[local_chave]["label"]
+    if fechados:
+        nomes = ", ".join(f["nome"] for f in fechados[:8])
+        a_mais = f" e mais {len(fechados) - 8}" if len(fechados) > 8 else ""
+        flash(f"✅ {nome_local} encerrada — check-out aplicado a {len(fechados)} pessoa(s): {nomes}{a_mais}.", "sucesso")
+    else:
+        flash(f"{nome_local}: ninguém estava com entrada aberta agora — nada pra fechar.", "sucesso")
+    return redirect(url_for("painel"))
 
 
 @app.route("/admin/participante/<int:participante_id>/excluir", methods=["POST"])
