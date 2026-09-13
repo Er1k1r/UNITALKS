@@ -353,6 +353,26 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 .ocupacao-label { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
 .ocupacao-dia { font-size: 0.72rem; color: #e3ddef; margin-top: 4px; text-transform: uppercase; letter-spacing: .03em; }
 
+.btn-encerrar-sala {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 14px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-encerrar-sala:hover { background: rgba(255,255,255,0.12); }
+.btn-encerrar-sala:disabled {
+  opacity: 0.35;
+  cursor: default;
+  border-color: rgba(255,255,255,0.15);
+}
+
 .tabela-visitas {
   margin-top: 10px;
   font-size: 0.82rem;
@@ -767,6 +787,27 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
 }
 .data-pill-insta:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
+/* Link do Instagram usado em cartões de fundo claro (ex.: "Inscrições
+   encerradas") — ao contrário do .data-pill-insta (pra cima do hero
+   escuro), este já traz o próprio fundo em degradê, então funciona em
+   qualquer cartão claro sem perder contraste. */
+.link-instagram {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  color: white;
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: filter 0.15s, transform 0.15s;
+}
+.link-instagram:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.link-instagram svg { flex-shrink: 0; }
+
 .btn-inscricao {
   background: linear-gradient(90deg, #ffc157, #ff6b4a);
   color: var(--navy);
@@ -1049,6 +1090,66 @@ th { color: var(--navy); font-family: var(--fonte-titulo); font-size: 0.72rem; f
   transition: background 0.15s;
 }
 .btn-excluir:hover { background: #f8d3ce; }
+
+/* --- Restaurar backup (painel): botão que abre o <dialog> + o modal --- */
+.btn-restaurar {
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--border);
+}
+.btn-restaurar:hover { background: #fdf1e6; }
+
+.modal-restaurar {
+  border: none;
+  border-radius: 14px;
+  padding: 26px 28px;
+  max-width: 480px;
+  width: 90%;
+  background: var(--card);
+  color: var(--navy);
+  box-shadow: 0 20px 60px rgba(27, 21, 51, 0.35);
+}
+.modal-restaurar::backdrop {
+  background: rgba(27, 21, 51, 0.55);
+}
+.modal-restaurar label:not(.checkbox-confirmacao) {
+  display: block;
+  font-weight: 600;
+  margin: 14px 0 6px;
+  font-size: 0.88rem;
+}
+.modal-restaurar input[type=file] {
+  width: 100%;
+  padding: 9px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: white;
+  font-family: var(--fonte-corpo);
+}
+.modal-restaurar .checkbox-confirmacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.modal-restaurar .checkbox-confirmacao input {
+  width: auto;
+  margin-top: 3px;
+}
+.modal-restaurar-acoes {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+.btn-restaurar-confirmar {
+  background: linear-gradient(90deg, #ff6b4a, #a5271e);
+  color: white;
+}
+.btn-restaurar-confirmar:hover { filter: brightness(1.06); }
 
 .tipo-opcoes {
   display: flex;
