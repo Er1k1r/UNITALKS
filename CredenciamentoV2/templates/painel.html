@@ -28,12 +28,23 @@
 
 <div class="card">
   <h2 style="margin-top:0;">📍 Ocupação por local, agora</h2>
+  <p style="color:var(--muted); font-size:0.82rem; margin:-6px 0 14px;">
+    "Encerrar sala" dá check-out (na hora de agora) em quem ainda estiver dentro daquela sala —
+    use quando uma Talks terminar antes do previsto, sem precisar esperar o encerramento geral das 21h.
+  </p>
   <div class="ocupacao-grid">
     {% for chave, info in locais.items() %}
+      {% set ocupacao = presentes_por_local.get(chave, 0) %}
       <div class="ocupacao-item">
-        <div class="ocupacao-num">{{ presentes_por_local.get(chave, 0) }}</div>
+        <div class="ocupacao-num">{{ ocupacao }}</div>
         <div class="ocupacao-label">{{ info.label }}</div>
         <div class="ocupacao-dia">Dia {{ info.dia }}</div>
+        <form method="post" action="{{ url_for('admin_checkout_sala', local_chave=chave) }}"
+              onsubmit="return confirm('Encerrar {{ info.label }} agora? Isso vai dar check-out (com o horário de agora) em {{ ocupacao }} pessoa(s) que ainda estiver(em) dentro dessa sala.');">
+          <button type="submit" class="btn-encerrar-sala" {{ 'disabled' if ocupacao == 0 else '' }}>
+            Encerrar sala
+          </button>
+        </form>
       </div>
     {% endfor %}
   </div>
@@ -45,6 +56,12 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn navy" href="{{ url_for('admin_backup') }}">💾 Baixar backup do banco</a>
       <a class="btn orange" href="{{ url_for('exportar') }}">⬇ Exportar CSV (Excel)</a>
+      <button type="button" class="btn btn-restaurar" onclick="document.getElementById('modal-restaurar').showModal()">♻️ Restaurar backup</button>
+      <form method="post" action="{{ url_for('admin_checkout_21h') }}"
+            onsubmit="return confirm('Isso vai dar check-out automático (às 21h) em todo mundo que ainda estiver com uma visita em aberto agora. Confirmar?');"
+            style="display:inline;">
+        <button type="submit" class="btn navy">🕘 Rodar check-out das 21h</button>
+      </form>
     </div>
   </div>
 
@@ -151,4 +168,32 @@
   </table>
   </div>
 </div>
+
+<dialog id="modal-restaurar" class="modal-restaurar">
+  <h2 style="margin-top:0;">♻️ Restaurar backup do banco</h2>
+  <p style="color:var(--muted); font-size:0.88rem; line-height:1.5;">
+    Isso <strong>substitui todos os dados atuais</strong> (todos os inscritos e todo o histórico
+    de check-in/check-out) pelo conteúdo do arquivo <code>.db</code> enviado abaixo. Antes de
+    trocar, o sistema salva automaticamente uma cópia de segurança do banco atual no servidor —
+    ainda assim, use só quando for realmente necessário (ex.: repor dados perdidos num reset do
+    servidor).
+  </p>
+  <form method="post" action="{{ url_for('admin_restaurar_backup') }}" enctype="multipart/form-data">
+    <label for="arquivo_db">Arquivo de backup (.db)</label>
+    <input type="file" id="arquivo_db" name="arquivo_db" accept=".db" required>
+
+    <label class="checkbox-confirmacao">
+      <input type="checkbox" name="confirmar_restauracao" required>
+      <span>Entendo que isso substitui todos os dados atuais.</span>
+    </label>
+
+    <div class="modal-restaurar-acoes">
+      <button type="button" class="btn navy" onclick="document.getElementById('modal-restaurar').close()">Cancelar</button>
+      <button type="submit" class="btn btn-restaurar-confirmar"
+              onclick="return confirm('Tem certeza? Isso vai SUBSTITUIR todos os inscritos e check-ins atuais pelo conteúdo do arquivo enviado. Essa ação não pode ser desfeita pelo site.');">
+        Restaurar agora
+      </button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}

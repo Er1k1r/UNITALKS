@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Inscrição no Evento{% endblock %}
 {% block content %}
+{% if not inscricoes_abertas %}
+<div class="card encerrado-card" style="max-width:640px; margin:0 auto; text-align:center;">
+  <h1>Inscrições encerradas</h1>
+  <p style="color:var(--muted)">
+    As inscrições para o UniTalks 2026 já foram encerradas. Qualquer dúvida, siga nossas redes sociais.
+  </p>
+  <a class="link-instagram" href="https://www.instagram.com/unitalks_2026.2?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw%3D%3D" target="_blank" rel="noopener" aria-label="Instagram do UniTalks 2026">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/>
+    </svg>
+    <span>Seguir no Instagram</span>
+  </a>
+</div>
+{% else %}
 <div class="card" style="max-width:640px; margin:0 auto;">
   <h1>Inscrição no evento</h1>
   <p style="color:var(--muted)">Preencha seus dados. Você receberá um QR Code de credenciamento (com opção de baixar em PDF) para usar no check-in e check-out.</p>
@@ -77,6 +93,7 @@
     <button type="submit">Confirmar inscrição</button>
   </form>
 </div>
+{% endif %}
 
 <script>
 const radiosTipo = document.querySelectorAll('input[name="tipo"]');
