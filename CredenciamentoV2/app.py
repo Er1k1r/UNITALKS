@@ -130,23 +130,19 @@ TALKS = {
         "titulo": "Talks 1: Administração & Tecnologia | Empreendedorismo",
         "foco": "Finanças, Gestão estratégica e Tecnologia.",
         "local": "auditorio_eva",
-        # Inscrições fechadas a pedido do cliente. A numeração 1-4 é mantida
-        # (já existem inscritos com trilha_dia2 = 1/2/4 no banco) — só as
-        # NOVAS inscrições ficam bloqueadas pra quem ainda não escolheu.
-        "vagas_abertas": False,
+        "vagas_abertas": True,
     },
     2: {
         "titulo": "Talks 2: Contabilidade",
         "foco": "Atuação Paralegal e os novos desafios da contabilidade.",
         "local": "sala_1",
-        "vagas_abertas": False,
+        "vagas_abertas": True,
     },
     3: {
         "titulo": "Talks 3: Contabilidade Pública",
         "foco": "Contabilidade Pública na era da IA.",
         "local": "sala_2",
-        # Fechada em 13/09 — as 4 trilhas do Dia 2 estão sem vaga agora.
-        "vagas_abertas": False,
+        "vagas_abertas": True,
     },
     4: {
         "titulo": "Talks 4: O profissional de Marketing digital mais procurado",
@@ -157,7 +153,7 @@ TALKS = {
             "problemas reais de mercado."
         ),
         "local": "sala_3",
-        "vagas_abertas": False,
+        "vagas_abertas": True,
     },
 }
 
@@ -348,6 +344,14 @@ iniciar_agendador_backup()
 def init_db():
     """Cria as tabelas se ainda não existirem. Seguro para rodar toda vez."""
     db = sqlite3.connect(DB_PATH)
+    # Ativa o modo WAL aqui, uma única vez, enquanto só existe esta conexão
+    # (init_db roda sozinho, antes do servidor aceitar requisições). Se essa
+    # troca de modo fosse deixada só para get_db() (como antes), a primeira
+    # rajada de requisições concorrentes contra um banco novo — ex.: várias
+    # inscrições/check-ins chegando ao mesmo tempo logo após o serviço subir
+    # do zero, comum em disco temporário de hospedagem gratuita — disputava
+    # a troca de modo entre si e algumas caíam com "database is locked".
+    db.execute("PRAGMA journal_mode = WAL")
     db.executescript(
         """
         CREATE TABLE IF NOT EXISTS participantes (
